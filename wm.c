@@ -1,4 +1,6 @@
 
+#include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +12,25 @@
 #include "policy.h"
 #include "wm.h"
 
-struct WM_t *wm_state_for_quit;
+struct WM_t *wm_state_for_quit = NULL;
+FILE *log_file = NULL;
+
+int msg(char *fmt, ...)
+{
+    va_list ap;
+    int i;
+    char msg[512];
+
+    va_start(ap, fmt);
+    i = vsnprintf(msg, sizeof(msg), fmt, ap);
+    printf("%s", msg);
+    if (log_file)
+    {
+        fprintf(log_file, "%s", msg);
+        fflush(log_file);
+    }
+    return i;
+}
 
 int makeColourPixel(struct WM_t *W, double r, double g, double b)
 {
@@ -55,18 +75,17 @@ static int error_handler(Display *dpy, XErrorEvent *ev)
     char errstr[128];
     struct wmclient *C;
 
-    XGetErrorText(dpy, ev->type, errstr, sizeof(errstr));
-    printf("X error: %s\n", errstr);
-    printf("    serial = %lu\n", ev->serial);
-    printf("    error_code = %d\n", ev->error_code);
-    printf("    request_code = %d\n", ev->request_code);
-    printf("    minor_code = %d\n", ev->minor_code);
-    printf("    resourceid = %lu\n", ev->resourceid);
+    XGetErrorText(dpy, ev->error_code, errstr, sizeof(errstr));
+    msg("X error: %s\n", errstr);
+    msg("    serial = %lu\n", ev->serial);
+    msg("    error_code = %d\n", ev->error_code);
+    msg("    request_code = %d\n", ev->request_code);
+    msg("    minor_code = %d\n", ev->minor_code);
+    msg("    resourceid = %lu\n", ev->resourceid);
 
-    fflush(stdout);
     C = client_from_window(wm_state_for_quit, ev->resourceid);
     if (C)
-        printf("    from client \'%s\'\n", C->name);
+        msg("    from client \'%s\'\n", C->name);
 
     return 0;   
 }
@@ -80,7 +99,7 @@ static void open_display(struct WM_t *W)
     W->XDisplay = XOpenDisplay(NULL);
     if (!W->XDisplay)
     {
-        fprintf(stderr, "Cannot open X display!\n");
+        msg("Cannot open X display!\n");
         exit(1);
     }
 
@@ -100,26 +119,22 @@ static void open_display(struct WM_t *W)
     XMapWindow(W->XDisplay, W->rootWindow);
 #endif
 
-    printf("Open...\n");
-
-    XSelectInput(W->XDisplay, W->rootWindow, KeyPressMask             |
-                                             KeyReleaseMask           |
-                                             EnterWindowMask          |
-                                             FocusChangeMask          |
-                                             SubstructureRedirectMask |
-                                             ButtonPressMask          |
-                                             ButtonReleaseMask        |
+    XSelectInput(W->XDisplay, W->rootWindow, KeyPressMask               |
+                                             KeyReleaseMask             |
+                                             EnterWindowMask            |
+                                             FocusChangeMask            |
+                                             SubstructureRedirectMask   |
+                                             ButtonPressMask            |
+                                             ButtonReleaseMask          |
                                              ExposureMask);
     
 
 
-    printf("did select input\n");
     /* Find out the geometry of the root window */
     XGetGeometry(W->XDisplay, W->rootWindow, &tmpwin,
                  &tmpx, &tmpy,
                  &(W->rW), &(W->rH),
                  &tmpbw, &tmpdepth);
-    printf("got geometry\n");
 
     XSetErrorHandler(error_handler);
 
@@ -131,10 +146,10 @@ static void key_pressed(struct WM_t *W, XEvent *ev)
     switch (ev->xkey.keycode)
     {
         case KEY_ALT:
-            printf("Alt!\n");
+            msg("Alt!\n");
             break;
         case KEY_WIN:
-            printf("Win key\n");
+            msg("Win key\n");
             system("dmenu_run &");
             break;
     }
@@ -150,7 +165,7 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
 {
     XEvent ev;
 
-    printf("Moving.\n");
+    msg("Moving.\n");
     XSelectInput(W->XDisplay, C->win, ButtonReleaseMask  |
                                       ButtonMotionMask   |
                                       KeyReleaseMask     |
@@ -173,8 +188,9 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
             case KeyRelease:
             case ButtonRelease:
             default:
-                printf("done moving. Last event was %d\n", ev.type);
-                XSelectInput(W->XDisplay, C->win, 0);
+                msg("done moving. Last event was %d\n", ev.type);
+                /* Select the normal events again */
+                client_select_events(W, C);
                 return;
         }
     }
@@ -193,25 +209,27 @@ static void event_loop(struct WM_t *W)
         switch (ev.type)
         {
             case ButtonPress:
-                printf("Button pressed\n");
-                if (C)
-                    printf("  ... in %s\n", C->name);
+                msg("Button pressed\n");
                 /* ALT+click to move a window */
                 if ((ev.xbutton.state & (Button1Mask | Mod1Mask)) && C)
                     move_client_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                else if (C)
+                    XRaiseWindow(W->XDisplay, C->win);
                 break;
             case MapRequest: /* Does not use CreateNotify */
-                printf("Map request\n");
+                msg("Map request\n");
                 if (!C) /* Don't register it again if it was just hiding for some reason */
                     client_register(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);
                 break;
             case UnmapNotify:
-                printf("Unmap \'%s\'\n", C->name);
+            case VisibilityNotify:
+            case DestroyNotify:
+                msg("Unmap \'%s\'\n", C->name);
                 break;
             case KeyPress:
-                printf("Keypress! %u\n", ev.xkey.keycode);
+                msg("Keypress! %u\n", ev.xkey.keycode);
                 key_pressed(W, &ev);
                 break;
             case Expose:
@@ -243,7 +261,7 @@ void tidy_up(void)
         if (W->clients[i] != NULL)
         {
             struct wmclient *c = W->clients[i];
-            printf("Freeing \'%s\'\n", c->name);
+            msg("Freeing \'%s\'\n", c->name);
         }
     }
     XCloseDisplay(W->XDisplay);
@@ -260,6 +278,9 @@ static void init_state(struct WM_t *W)
 int main(void)
 {
     struct WM_t W;
+
+    log_file = fopen("wm_errors.txt", "w");
+    assert(log_file);
 
     wm_state_for_quit = &W;
     atexit(tidy_up);

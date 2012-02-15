@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -23,7 +24,7 @@ static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
     e.above = None;
     e.override_redirect = 0;
     XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
-    printf("configurenotify sent\n");
+    msg("configurenotify sent\n");
 }
 
 /* Add a new client to the list */
@@ -35,11 +36,16 @@ int client_insert(struct WM_t *W, struct wmclient *C)
         if (W->clients[i] == NULL)
         {
             W->clients[i] = C;
-            printf("Client %s inserted at %d\n", C->name, i);
+            msg("Client \'%s\' inserted at %d\n", C->name, i);
             return i;
         }
     }
     return -1;
+}
+
+void client_select_events(struct WM_t *W, struct wmclient *C)
+{
+    XSelectInput(W->XDisplay, C->win, ButtonPressMask | LeaveWindowMask);
 }
 
 /* Register a client, steal its border, grap events, etc */
@@ -51,24 +57,25 @@ void client_register(struct WM_t *W, Window xwindow_id)
     XFetchName(W->XDisplay, xwindow_id, &name);
     if (!name)
         name = "--";
-    printf("Registering \'%s\':\n", name);
+    msg("Registering \'%s\':\n", name);
 
-    C->name = name;
+    /* Duplicate the string in case the window closes but the string is still required */
+    C->name = strdup(name);
     C->win = xwindow_id;
 
     decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
 
-    printf("decided size\n");
+    msg("decided size\n");
 
     XResizeWindow(W->XDisplay, C->win, C->w, C->h);
-    printf("Resized\n");
+    msg("Resized\n");
 
     /* Add a border */
     XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
-    printf("Border added\n");
+    msg("Border added\n");
     /* Set the colour */
     XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
-    printf("colour changed\n");
+    msg("colour changed\n");
 
 
     /* Grab ALT+click events for moving windows */
@@ -76,11 +83,12 @@ void client_register(struct WM_t *W, Window xwindow_id)
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
 
-    printf("Buttons grabbed\n");
+    client_select_events(W, C);
+    msg("Buttons grabbed\n");
 
     send_ConfigureNotify(W, C);
     XMapWindow(W->XDisplay, C->win);
-    printf("Mapped\n");
+    msg("Mapped\n");
 
     XFlush(W->XDisplay);
 

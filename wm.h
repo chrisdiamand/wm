@@ -42,7 +42,11 @@ void do_alttab(struct WM_t *);
 /* Functions from client.c */
 int client_insert(struct WM_t *, struct wmclient *);
 void client_register(struct WM_t *, Window);
+void client_select_events(struct WM_t *, struct wmclient *);
 struct wmclient *client_from_window(struct WM_t *, Window);
+
+/* Debugging function */
+int msg(char *, ...);
 
 #define KEY_Q 24
 #define KEY_ALT 64
