@@ -50,6 +50,27 @@ static void redraw_root(struct WM_t *W, XEvent *ev)
     XFillRectangle(W->XDisplay, W->rootWindow, gc, x, y, w, h);
 }
 
+static int error_handler(Display *dpy, XErrorEvent *ev)
+{
+    char errstr[128];
+    struct wmclient *C;
+
+    XGetErrorText(dpy, ev->type, errstr, sizeof(errstr));
+    printf("X error: %s\n", errstr);
+    printf("    serial = %lu\n", ev->serial);
+    printf("    error_code = %d\n", ev->error_code);
+    printf("    request_code = %d\n", ev->request_code);
+    printf("    minor_code = %d\n", ev->minor_code);
+    printf("    resourceid = %lu\n", ev->resourceid);
+
+    fflush(stdout);
+    C = client_from_window(wm_state_for_quit, ev->resourceid);
+    if (C)
+        printf("    from client \'%s\'\n", C->name);
+
+    return 0;   
+}
+
 static void open_display(struct WM_t *W)
 {
     Window root, tmpwin;
@@ -100,6 +121,8 @@ static void open_display(struct WM_t *W)
                  &tmpbw, &tmpdepth);
     printf("got geometry\n");
 
+    XSetErrorHandler(error_handler);
+
     redraw_root(W, NULL);
 }
 
@@ -115,101 +138,6 @@ static void key_pressed(struct WM_t *W, XEvent *ev)
             system("dmenu_run &");
             break;
     }
-}
-
-static int insert_client(struct WM_t *W, struct wmclient *C)
-{
-    int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        if (W->clients[i] == NULL)
-        {
-            W->clients[i] = C;
-            printf("Client %s inserted at %d\n", C->name, i);
-            return i;
-        }
-    }
-    return -1;
-}
-
-static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
-{
-    XConfigureEvent e;
-    e.type = ConfigureNotify;
-    e.display = W->XDisplay;
-    e.event = C->win;
-    e.window = C->win;
-    e.x = C->x;
-    e.y = C->y;
-    e.width = C->w;
-    e.height = C->h;
-    e.border_width = W->bsize;
-    e.above = None;
-    e.override_redirect = 0;
-    XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
-    printf("configurenotify sent\n");
-}
-
-static void register_client(struct WM_t *W, Window xwindow_id)
-{
-    char *name;
-    struct wmclient *C = malloc(sizeof(*C));
-
-    XFetchName(W->XDisplay, xwindow_id, &name);
-    if (!name)
-        name = "--";
-    printf("Registering \'%s\':\n", name);
-
-    C->name = name;
-    C->win = xwindow_id;
-
-    decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
-
-    printf("decided size\n");
-
-    XResizeWindow(W->XDisplay, C->win, C->w, C->h);
-    printf("Resized\n");
-
-    /* Add a border */
-    XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
-    printf("Border added\n");
-    /* Set the colour */
-    XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
-    printf("colour changed\n");
-
-
-    /* Grab ALT+click events for moving windows */
-    XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
-                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-                GrabModeAsync, GrabModeSync, None, None);
-
-    printf("Buttons grabbed\n");
-
-    send_ConfigureNotify(W, C);
-    XMapWindow(W->XDisplay, C->win);
-    printf("Mapped\n");
-
-    XFlush(W->XDisplay);
-
-    insert_client(W, C);
-}
-
-struct wmclient *client_from_window(struct WM_t *W, Window id)
-{
-    int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        struct wmclient *C = W->clients[i];
-        /* Don't test null entries */
-        if (C != NULL)
-        {
-            if (C->win == id)
-            {
-                return C;
-            }
-        }
-    }
-    return NULL;
 }
 
 static void expose_event(struct WM_t *W, XEvent *ev)
@@ -275,7 +203,7 @@ static void event_loop(struct WM_t *W)
             case MapRequest: /* Does not use CreateNotify */
                 printf("Map request\n");
                 if (!C) /* Don't register it again if it was just hiding for some reason */
-                    register_client(W, ev.xmaprequest.window);
+                    client_register(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);
                 break;
@@ -300,7 +228,7 @@ static void find_open_windows(struct WM_t *W)
     XQueryTree(W->XDisplay, W->rootWindow, &root_ret, &par_ret, &children, &n);
 
     for (i = 0; i < n; i++)
-        register_client(W, children[i]);
+        client_register(W, children[i]);
 
     XFree(children);
 }

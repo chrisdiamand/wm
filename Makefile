@@ -1,6 +1,6 @@
 
 
-OBJ=alttab.o policy.o wm.o
+OBJ=alttab.o policy.o wm.o client.o
 OUT=wm
 LIBS=-lX11
 CFLAGS=-Wall -pedantic
