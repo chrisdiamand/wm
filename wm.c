@@ -132,6 +132,24 @@ static int insert_client(struct WM_t *W, struct wmclient *C)
     return -1;
 }
 
+static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
+{
+    XConfigureEvent e;
+    e.type = ConfigureNotify;
+    e.display = W->XDisplay;
+    e.event = C->win;
+    e.window = C->win;
+    e.x = C->x;
+    e.y = C->y;
+    e.width = C->w;
+    e.height = C->h;
+    e.border_width = W->bsize;
+    e.above = None;
+    e.override_redirect = 0;
+    XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
+    printf("configurenotify sent\n");
+}
+
 static void register_client(struct WM_t *W, Window xwindow_id)
 {
     char *name;
@@ -147,12 +165,17 @@ static void register_client(struct WM_t *W, Window xwindow_id)
 
     decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
 
+    printf("decided size\n");
+
     XResizeWindow(W->XDisplay, C->win, C->w, C->h);
+    printf("Resized\n");
 
     /* Add a border */
     XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
+    printf("Border added\n");
     /* Set the colour */
     XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
+    printf("colour changed\n");
 
 
     /* Grab ALT+click events for moving windows */
@@ -160,7 +183,11 @@ static void register_client(struct WM_t *W, Window xwindow_id)
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
 
+    printf("Buttons grabbed\n");
+
+    send_ConfigureNotify(W, C);
     XMapWindow(W->XDisplay, C->win);
+    printf("Mapped\n");
 
     XFlush(W->XDisplay);
 
@@ -238,6 +265,9 @@ static void event_loop(struct WM_t *W)
         switch (ev.type)
         {
             case ButtonPress:
+                printf("Button pressed\n");
+                if (C)
+                    printf("  ... in %s\n", C->name);
                 /* ALT+click to move a window */
                 if ((ev.xbutton.state & (Button1Mask | Mod1Mask)) && C)
                     move_client_window(W, C, ev.xbutton.x, ev.xbutton.y);
@@ -248,6 +278,9 @@ static void event_loop(struct WM_t *W)
                     register_client(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);
+                break;
+            case UnmapNotify:
+                printf("Unmap \'%s\'\n", C->name);
                 break;
             case KeyPress:
                 printf("Keypress! %u\n", ev.xkey.keycode);
