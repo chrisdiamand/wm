@@ -143,32 +143,26 @@ static void register_client(struct WM_t *W, Window xwindow_id)
     printf("Registering \'%s\':\n", name);
 
     C->name = name;
-    C->actual = xwindow_id;
+    C->win = xwindow_id;
 
-    decide_new_window_size_pos(W, xwindow_id, &(C->x), &(C->y), &(C->w), &(C->h));
+    decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
 
-    XResizeWindow(W->XDisplay, xwindow_id, C->w, C->h);
+    XResizeWindow(W->XDisplay, C->win, C->w, C->h);
 
-    /* Add extra size for the border */
-    C->w += 2 * W->bsize;
-    C->h += 2 * W->bsize;
+    /* Add a border */
+    XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
+    /* Set the colour */
+    XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
 
-    /* Create a parent window, black border and background */
-    C->border = XCreateSimpleWindow(W->XDisplay, W->rootWindow,
-                                    C->x, C->y,
-                                    C->w, C->h, 0,
-                                    BlackPixel(W->XDisplay, W->XScreen),
-                                    BlackPixel(W->XDisplay, W->XScreen));
-
-    XReparentWindow(W->XDisplay, C->actual, C->border, W->bsize, W->bsize);
-    XMapWindow(W->XDisplay, C->border);
-    XMapWindow(W->XDisplay, C->actual);
-    XFlush(W->XDisplay);
 
     /* Grab ALT+click events for moving windows */
-    XGrabButton(W->XDisplay, Button1, Mod1Mask, C->border, 0,
+    XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
+
+    XMapWindow(W->XDisplay, C->win);
+
+    XFlush(W->XDisplay);
 
     insert_client(W, C);
 }
@@ -182,7 +176,7 @@ struct wmclient *client_from_window(struct WM_t *W, Window id)
         /* Don't test null entries */
         if (C != NULL)
         {
-            if (C->actual == id || C->border == id)
+            if (C->win == id)
             {
                 return C;
             }
@@ -202,12 +196,12 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
     XEvent ev;
 
     printf("Moving.\n");
-    XSelectInput(W->XDisplay, C->border, ButtonReleaseMask  |
-                                         ButtonMotionMask   |
-                                         KeyReleaseMask     |
-                                         PointerMotionMask);
+    XSelectInput(W->XDisplay, C->win, ButtonReleaseMask  |
+                                      ButtonMotionMask   |
+                                      KeyReleaseMask     |
+                                      PointerMotionMask);
 
-    XRaiseWindow(W->XDisplay, C->border);
+    XRaiseWindow(W->XDisplay, C->win);
 
     while (1)
     {
@@ -215,7 +209,7 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
         switch (ev.type)
         {
             case MotionNotify:
-                XMoveWindow(W->XDisplay, C->border,
+                XMoveWindow(W->XDisplay, C->win,
                             ev.xmotion.x_root - xOff, ev.xmotion.y_root - yOff);
                 break;
             case Expose:
@@ -225,7 +219,7 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
             case ButtonRelease:
             default:
                 printf("done moving. Last event was %d\n", ev.type);
-                XSelectInput(W->XDisplay, C->border, 0);
+                XSelectInput(W->XDisplay, C->win, 0);
                 return;
         }
     }
@@ -252,6 +246,8 @@ static void event_loop(struct WM_t *W)
                 printf("Map request\n");
                 if (!C) /* Don't register it again if it was just hiding for some reason */
                     register_client(W, ev.xmaprequest.window);
+                else
+                    XMapWindow(W->XDisplay, C->win);
                 break;
             case KeyPress:
                 printf("Keypress! %u\n", ev.xkey.keycode);
@@ -287,7 +283,6 @@ void tidy_up(void)
         {
             struct wmclient *c = W->clients[i];
             printf("Freeing \'%s\'\n", c->name);
-            XReparentWindow(W->XDisplay, c->actual, W->rootWindow, c->x, c->y);
         }
     }
     XCloseDisplay(W->XDisplay);
@@ -296,7 +291,7 @@ void tidy_up(void)
 static void init_state(struct WM_t *W)
 {
     int i;
-    W->bsize = 3;
+    W->bsize = 1;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
 }

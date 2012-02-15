@@ -10,8 +10,7 @@
 struct wmclient
 {
     char                *name;
-    Window              border;
-    Window              actual;
+    Window              win;
     int                 x, y, w, h;
 };
 
