@@ -90,6 +90,27 @@ static int error_handler(Display *dpy, XErrorEvent *ev)
     return 0;   
 }
 
+static int starting_error_handler(Display *dpy, XErrorEvent *ev)
+{
+    /* If this function is called another WM must be running */
+    msg("Error: Could not select SubstructureRedirectMask on root window.\n");
+    msg("Is another window manager running?\n");
+    msg("Quitting.\n");
+    /* Die properly so the atexit() function isn't called */
+    _Exit(1);
+    return 1;
+}
+
+static void check_existing_wm(struct WM_t *W)
+{
+    XSetErrorHandler(starting_error_handler);
+    /* This will cause an error if there is another WM running */
+    XSelectInput(W->XDisplay, W->rootWindow, SubstructureRedirectMask);
+    /* Wait for all events to be processed */
+    XSync(W->XDisplay, 0);
+    XSetErrorHandler(NULL);
+}
+
 static void open_display(struct WM_t *W)
 {
     Window root, tmpwin;
@@ -109,19 +130,13 @@ static void open_display(struct WM_t *W)
     
 
     W->rootWindow = root;
-#if 0
-    /* Make a pretend root window to avoid lots of logging in and out */
-    W->rootWindow = XCreateSimpleWindow(W->XDisplay, root,
-                                        100, 100, 640, 240, 1,
-                                        BlackPixel(W->XDisplay, W->XScreen),
-                                        WhitePixel(W->XDisplay, W->XScreen));
 
-    XMapWindow(W->XDisplay, W->rootWindow);
-#endif
+    check_existing_wm(W);
 
     XSelectInput(W->XDisplay, W->rootWindow, KeyPressMask               |
                                              KeyReleaseMask             |
                                              EnterWindowMask            |
+                                             LeaveWindowMask            |
                                              FocusChangeMask            |
                                              SubstructureRedirectMask   |
                                              ButtonPressMask            |
@@ -256,6 +271,7 @@ void tidy_up(void)
 {
     struct WM_t *W = wm_state_for_quit;
     int i;
+    printf("Tidy up...\n");
     for (i = 0; i < MAX_CLIENTS; i++)
     {
         if (W->clients[i] != NULL)
@@ -265,6 +281,7 @@ void tidy_up(void)
         }
     }
     XCloseDisplay(W->XDisplay);
+    printf("Done!\n");
 }
 
 static void init_state(struct WM_t *W)
@@ -281,6 +298,7 @@ int main(void)
 
     log_file = fopen("wm_errors.txt", "w");
     assert(log_file);
+
 
     wm_state_for_quit = &W;
     atexit(tidy_up);
