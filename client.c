@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +46,7 @@ int client_insert(struct WM_t *W, struct wmclient *C)
 
 void client_select_events(struct WM_t *W, struct wmclient *C)
 {
-    XSelectInput(W->XDisplay, C->win, ButtonPressMask | LeaveWindowMask);
+    XSelectInput(W->XDisplay, C->win, StructureNotifyMask | LeaveWindowMask);
 }
 
 /* Register a client, steal its border, grap events, etc */
@@ -56,11 +57,12 @@ void client_register(struct WM_t *W, Window xwindow_id)
 
     XFetchName(W->XDisplay, xwindow_id, &name);
     if (!name)
-        name = "--";
+        name = "<notitle>";
     msg("Registering \'%s\':\n", name);
 
     /* Duplicate the string in case the window closes but the string is still required */
     C->name = strdup(name);
+    printf("name = %p, from x = %p\n", C->name, name);
     C->win = xwindow_id;
 
     decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
@@ -95,8 +97,7 @@ void client_register(struct WM_t *W, Window xwindow_id)
     client_insert(W, C);
 }
 
-/* Find a wmclient structure from its window ID */
-struct wmclient *client_from_window(struct WM_t *W, Window id)
+static int get_client_index(struct WM_t *W, Window id)
 {
     int i;
     for (i = 0; i < MAX_CLIENTS; i++)
@@ -107,9 +108,31 @@ struct wmclient *client_from_window(struct WM_t *W, Window id)
         {
             if (C->win == id)
             {
-                return C;
+                return i;
             }
         }
     }
+    return -1;
+}
+
+/* Find a wmclient structure from its window ID */
+struct wmclient *client_from_window(struct WM_t *W, Window id)
+{
+    int idx = get_client_index(W, id);
+    if (idx >= 0)
+        return W->clients[idx];
     return NULL;
 }
+
+void client_remove(struct WM_t *W, struct wmclient *C)
+{
+    int i = get_client_index(W, C->win);
+
+    assert(W->clients[i] == C);
+
+    msg("Removing client \'%s\'\n", C->name);
+    free(C->name);
+    free(C);
+    W->clients[i] = NULL;
+}
+

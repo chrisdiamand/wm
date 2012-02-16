@@ -1,9 +1,9 @@
 
 
-OBJ=alttab.o policy.o wm.o client.o
+OBJ=alttab.o event.o policy.o wm.o client.o
 OUT=wm
 LIBS=-lX11
-CFLAGS=-Wall -pedantic
+CFLAGS=-g -Wall -pedantic
 
 all: $(OUT)
 

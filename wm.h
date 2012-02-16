@@ -44,6 +44,10 @@ int client_insert(struct WM_t *, struct wmclient *);
 void client_register(struct WM_t *, Window);
 void client_select_events(struct WM_t *, struct wmclient *);
 struct wmclient *client_from_window(struct WM_t *, Window);
+void client_remove(struct WM_t *, struct wmclient *);
+
+/* Functions from event.c */
+char *event_name(int);
 
 /* Debugging function */
 int msg(char *, ...);

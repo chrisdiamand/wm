@@ -135,8 +135,6 @@ static void open_display(struct WM_t *W)
 
     XSelectInput(W->XDisplay, W->rootWindow, KeyPressMask               |
                                              KeyReleaseMask             |
-                                             EnterWindowMask            |
-                                             LeaveWindowMask            |
                                              FocusChangeMask            |
                                              SubstructureRedirectMask   |
                                              ButtonPressMask            |
@@ -179,31 +177,33 @@ static void expose_event(struct WM_t *W, XEvent *ev)
 static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
 {
     XEvent ev;
+    long mask = ButtonReleaseMask   |
+                ButtonMotionMask    |
+                ExposureMask        |
+                PointerMotionMask;
 
     msg("Moving.\n");
-    XSelectInput(W->XDisplay, C->win, ButtonReleaseMask  |
-                                      ButtonMotionMask   |
-                                      KeyReleaseMask     |
-                                      PointerMotionMask);
+    XSelectInput(W->XDisplay, C->win, mask);
 
     XRaiseWindow(W->XDisplay, C->win);
 
     while (1)
     {
-        XNextEvent(W->XDisplay, &ev);
+        /* Don't use XNextEvent as moving could be stopped if another window closes,
+         * for example. This could also mean such events are missed completely. */
+        XMaskEvent(W->XDisplay, mask, &ev);
         switch (ev.type)
         {
             case MotionNotify:
                 XMoveWindow(W->XDisplay, C->win,
                             ev.xmotion.x_root - xOff, ev.xmotion.y_root - yOff);
                 break;
-            case Expose:
+            case Expose: /* Redraw background during window moves */
                 expose_event(W, &ev);
                 break;
-            case KeyRelease:
             case ButtonRelease:
             default:
-                msg("done moving. Last event was %d\n", ev.type);
+                msg("done moving. Last event was %s\n", event_name(ev.type));
                 /* Select the normal events again */
                 client_select_events(W, C);
                 return;
@@ -218,8 +218,9 @@ static void event_loop(struct WM_t *W)
     while (1)
     {
         XNextEvent(W->XDisplay, &ev);
-
+        printf("Event: %s ... ", event_name(ev.type));
         C = client_from_window(W, ev.xany.window);
+        printf("client = %p\n", C);
 
         switch (ev.type)
         {
@@ -239,9 +240,12 @@ static void event_loop(struct WM_t *W)
                     XMapWindow(W->XDisplay, C->win);
                 break;
             case UnmapNotify:
-            case VisibilityNotify:
+                if (C)
+                    msg("%s unmapped\n", C->name);
+                break;
             case DestroyNotify:
-                msg("Unmap \'%s\'\n", C->name);
+                if (C)
+                    client_remove(W, C);
                 break;
             case KeyPress:
                 msg("Keypress! %u\n", ev.xkey.keycode);
