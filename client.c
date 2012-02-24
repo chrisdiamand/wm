@@ -46,7 +46,7 @@ int client_insert(struct WM_t *W, struct wmclient *C)
 
 void client_select_events(struct WM_t *W, struct wmclient *C)
 {
-    XSelectInput(W->XDisplay, C->win, StructureNotifyMask | LeaveWindowMask);
+    XSelectInput(W->XDisplay, C->win, StructureNotifyMask);
 }
 
 /* Register a client, steal its border, grap events, etc */

@@ -15,6 +15,12 @@
 struct WM_t *wm_state_for_quit = NULL;
 FILE *log_file = NULL;
 
+/* For some reason this won't work as a macro... */
+static int ABS(int n)
+{
+    return n >= 0 ? n : -n;
+}
+
 int msg(char *fmt, ...)
 {
     va_list ap;
@@ -174,6 +180,8 @@ static void expose_event(struct WM_t *W, XEvent *ev)
         redraw_root(W, ev);
 }
 
+/* Move a window. It has been clicked at coordinates (xOff, yOff) relative to
+ * the top-left corner of the client. */
 static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
 {
     XEvent ev;
@@ -181,6 +189,8 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
                 ButtonMotionMask    |
                 ExposureMask        |
                 PointerMotionMask;
+    /* Top left corner (x, y), bottom right corner (rx, ry) */
+    int x, y, rx, ry;
 
     msg("Moving.\n");
     XSelectInput(W->XDisplay, C->win, mask);
@@ -195,8 +205,20 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
         switch (ev.type)
         {
             case MotionNotify:
-                XMoveWindow(W->XDisplay, C->win,
-                            ev.xmotion.x_root - xOff, ev.xmotion.y_root - yOff);
+                x = ev.xmotion.x_root - xOff;
+                y = ev.xmotion.y_root - yOff;
+                rx = x + C->w + 2 * W->bsize;
+                ry = y + C->h + 2 * W->bsize;
+                /* Snap to borders if near edges */
+                if (ABS(x) < W->snapwidth)
+                    x = 0;
+                if (ABS(y) < W->snapwidth)
+                    y = 0;
+                if (ABS(W->rW - rx) < W->snapwidth)
+                    x = W->rW - C->w - 2*W->bsize;
+                if (ABS(W->rH - ry) < W->snapwidth)
+                    y = W->rH - C->h - 2*W->bsize;
+                XMoveWindow(W->XDisplay, C->win, x, y);
                 break;
             case Expose: /* Redraw background during window moves */
                 expose_event(W, &ev);
@@ -292,6 +314,7 @@ static void init_state(struct WM_t *W)
 {
     int i;
     W->bsize = 1;
+    W->snapwidth = 15;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
 }

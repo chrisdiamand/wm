@@ -28,6 +28,8 @@ struct WM_t
 
     /* Default window border size */
     int                 bsize;
+    /* Maximum distance for snapping to borders during window moves */
+    int                 snapwidth;
 
     /* List of open windows/programs. Too lazy to do a linked list so
      * bodged fixed array thingy for now. */
