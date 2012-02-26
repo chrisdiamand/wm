@@ -47,6 +47,82 @@ int client_insert(struct WM_t *W, struct wmclient *C)
 void client_select_events(struct WM_t *W, struct wmclient *C)
 {
     XSelectInput(W->XDisplay, C->win, StructureNotifyMask);
+
+    /* Grab ALT+click events for moving windows */
+    XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
+                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
+                GrabModeAsync, GrabModeSync, None, None);
+    /* Alt-Tab */
+    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, XK_Tab),
+             Mod1Mask, C->win, 0, GrabModeAsync, GrabModeAsync);
+    /* Shift-alt-F for fullscreen */
+    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, XK_f),
+             ShiftMask | Mod1Mask, C->win, 0, GrabModeAsync, GrabModeAsync);
+    /* Grab for any click so if it is clicked on it can be refocused */
+    XGrabButton(W->XDisplay, Button1, 0, C->win, 1, ButtonPressMask,
+                GrabModeAsync, GrabModeSync, None, None);
+}
+
+/* Set a 1-pixel border and position it at the size/pos in C */
+static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
+{
+    /* Add a border */
+    XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
+    msg("Border added\n");
+    /* Set the colour */
+    XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
+    msg("colour changed\n");
+
+    XMoveResizeWindow(W->XDisplay, C->win, C->x, C->y, C->w, C->h);
+    msg("Resized and moved\n");
+}
+
+void client_focus(struct WM_t *W, struct wmclient *C)
+{
+    int i;
+    printf("Focus %s!\n", C->name);
+    /* Go through all the clients and decrease their focus number.
+       0 is the window in focus */
+    for (i = 0; i < MAX_CLIENTS; i++)
+    {
+        struct wmclient *D = W->clients[i];
+        if (D)
+        {
+            /* If it was the old focus it has its click-grab turned off; reenable it */
+            if (D->focus == 0)
+                XGrabButton(W->XDisplay, Button1, 0, D->win, 1, ButtonPressMask,
+                            GrabModeAsync, GrabModeSync, None, None);
+            if (D->focus > C->focus)
+                D->focus--;
+        }
+    }
+    C->focus = 0;
+    XRaiseWindow(W->XDisplay, C->win);
+    XSetInputFocus(W->XDisplay, C->win, RevertToPointerRoot, CurrentTime);
+    XUngrabButton(W->XDisplay, Button1, 0, C->win);
+}
+
+static void maximise(struct WM_t *W, struct wmclient *C)
+{
+    msg("MAX: %s\n", C->name);
+    C->fullscreen = 1;
+    XSetWindowBorderWidth(W->XDisplay, C->win, 0);
+    XMoveResizeWindow(W->XDisplay, C->win, 0, 0, W->rW, W->rH);
+}
+
+static void unmaximise(struct WM_t *W, struct wmclient *C)
+{
+    msg("MIN: %s\n", C->name);
+    C->fullscreen = 0;
+    set_size_pos_border(W, C);
+}
+
+void client_togglefullscreen(struct WM_t *W, struct wmclient *C)
+{
+    if (!C->fullscreen)
+        maximise(W, C);
+    else
+        unmaximise(W, C);
 }
 
 /* Register a client, steal its border, grap events, etc */
@@ -67,30 +143,18 @@ void client_register(struct WM_t *W, Window xwindow_id)
 
     decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
 
-    msg("decided size\n");
+    C->fullscreen = 0;
 
-    XResizeWindow(W->XDisplay, C->win, C->w, C->h);
-    msg("Resized\n");
-
-    /* Add a border */
-    XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
-    msg("Border added\n");
-    /* Set the colour */
-    XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
-    msg("colour changed\n");
-
-
-    /* Grab ALT+click events for moving windows */
-    XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
-                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-                GrabModeAsync, GrabModeSync, None, None);
-
+    set_size_pos_border(W, C);
+        
     client_select_events(W, C);
     msg("Buttons grabbed\n");
 
     send_ConfigureNotify(W, C);
     XMapWindow(W->XDisplay, C->win);
     msg("Mapped\n");
+
+    client_focus(W, C);
 
     XFlush(W->XDisplay);
 

@@ -160,14 +160,23 @@ static void open_display(struct WM_t *W)
     redraw_root(W, NULL);
 }
 
-static void key_pressed(struct WM_t *W, XEvent *ev)
+/* XK_Super_L is win key */
+static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
-    switch (ev->xkey.keycode)
+    KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
+    switch (sym)
     {
-        case KEY_ALT:
+        case XK_Alt_L:
             msg("Alt!\n");
             break;
-        case KEY_WIN:
+        case XK_Tab:
+            do_alttab(W);
+            break;
+        case XK_f:
+            if ((ev->xkey.state & Mod1Mask) && (ev->xkey.state & ShiftMask))
+                client_togglefullscreen(W, C);
+            break;
+        case XK_Super_L:
             msg("Win key\n");
             system("dmenu_run &");
             break;
@@ -192,10 +201,16 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
     /* Top left corner (x, y), bottom right corner (rx, ry) */
     int x, y, rx, ry;
 
+    XRaiseWindow(W->XDisplay, C->win);
+    /* Can't move fullscreen windows */
+    if (C->fullscreen)
+    {
+        msg("Can't move fullscreen windows!\n");
+        return;
+    }
+
     msg("Moving.\n");
     XSelectInput(W->XDisplay, C->win, mask);
-
-    XRaiseWindow(W->XDisplay, C->win);
 
     while (1)
     {
@@ -219,6 +234,8 @@ static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int
                 if (ABS(W->rH - ry) < W->snapwidth)
                     y = W->rH - C->h - 2*W->bsize;
                 XMoveWindow(W->XDisplay, C->win, x, y);
+                C->x = x;
+                C->y = y;
                 break;
             case Expose: /* Redraw background during window moves */
                 expose_event(W, &ev);
@@ -242,15 +259,18 @@ static void event_loop(struct WM_t *W)
         XNextEvent(W->XDisplay, &ev);
         printf("Event: %s ... ", event_name(ev.type));
         C = client_from_window(W, ev.xany.window);
-        printf("client = %p\n", C);
 
         switch (ev.type)
         {
+            /* Mouse button */
             case ButtonPress:
                 msg("Button pressed\n");
                 /* ALT+click to move a window */
-                if ((ev.xbutton.state & (Button1Mask | Mod1Mask)) && C)
+                if (C && (ev.xbutton.state & (Button1Mask | Mod1Mask)))
                     move_client_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                /* A normal click to focus a window */
+                if (C && ev.xbutton.state == 0)
+                    client_focus(W, C);
                 else if (C)
                     XRaiseWindow(W->XDisplay, C->win);
                 break;
@@ -270,8 +290,7 @@ static void event_loop(struct WM_t *W)
                     client_remove(W, C);
                 break;
             case KeyPress:
-                msg("Keypress! %u\n", ev.xkey.keycode);
-                key_pressed(W, &ev);
+                key_pressed(W, C, &ev);
                 break;
             case Expose:
                 expose_event(W, &ev);

@@ -12,6 +12,8 @@ struct wmclient
     char                *name;
     Window              win;
     int                 x, y, w, h;
+    int                 fullscreen;
+    int                 focus;
 };
 
 /* Hold state info about the WM */
@@ -46,6 +48,8 @@ int client_insert(struct WM_t *, struct wmclient *);
 void client_register(struct WM_t *, Window);
 void client_select_events(struct WM_t *, struct wmclient *);
 struct wmclient *client_from_window(struct WM_t *, Window);
+void client_togglefullscreen(struct WM_t *W, struct wmclient *C);
+void client_focus(struct WM_t *W, struct wmclient *C);
 void client_remove(struct WM_t *, struct wmclient *);
 
 /* Functions from event.c */

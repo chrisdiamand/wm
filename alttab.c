@@ -159,3 +159,21 @@ void init_menu(struct WM_t *W)
 }
 
 #endif
+
+static int count_clients(struct WM_t *W)
+{
+    int i, n = 0;
+    for (i = 0; i < MAX_CLIENTS; i++)
+    {
+        if (W->clients[i] != NULL)
+            n++;
+    }
+    return n;
+}
+
+void do_alttab(struct WM_t *W)
+{
+    int n = count_clients(W);
+    printf("Doing alt.tab, %d clients\n", n);
+}
+
