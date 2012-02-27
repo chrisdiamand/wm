@@ -117,6 +117,23 @@ static void check_existing_wm(struct WM_t *W)
     XSetErrorHandler(NULL);
 }
 
+unsigned long colour_from_rgb(struct WM_t *W, double r, double g, double b)
+{
+    XColor c;
+    c.red = r * 65535.0;
+    c.green = g * 65535.0;
+    c.blue = b * 65535.0;
+    XAllocColor(W->XDisplay, DefaultColormap(W->XDisplay, DefaultScreen(W->XDisplay)), &c);
+    return c.pixel;
+}
+
+static void make_colours(struct WM_t *W)
+{
+    W->black = BlackPixel(W->XDisplay, W->XScreen);
+    W->white = WhitePixel(W->XDisplay, W->XScreen);
+    W->focus_border_colour = colour_from_rgb(W, 0.5, 0.5, 0.9);
+}
+
 static void open_display(struct WM_t *W)
 {
     Window root, tmpwin;
@@ -154,6 +171,8 @@ static void open_display(struct WM_t *W)
                  &tmpx, &tmpy,
                  &(W->rW), &(W->rH),
                  &tmpbw, &tmpdepth);
+
+    make_colours(W);
 
     XSetErrorHandler(error_handler);
 
@@ -257,7 +276,7 @@ static void event_loop(struct WM_t *W)
     while (1)
     {
         XNextEvent(W->XDisplay, &ev);
-        printf("Event: %s ... ", event_name(ev.type));
+        printf("- %s -\n", event_name(ev.type));
         C = client_from_window(W, ev.xany.window);
 
         switch (ev.type)
@@ -334,6 +353,7 @@ static void init_state(struct WM_t *W)
     int i;
     W->bsize = 1;
     W->snapwidth = 15;
+    W->nclients = 0;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
 }

@@ -9,17 +9,16 @@
 
 #include "wm.h"
 
-#if 0
-int makeColourPixel(struct WM_t *W, double r, double g, double b)
+struct alttab
 {
-    XColor c;
-    c.red = r * 65535.0;
-    c.green = g * 65535.0;
-    c.blue = b * 65535.0;
-    XAllocColor(W->XDisplay, DefaultColormap(W->XDisplay, DefaultScreen(W->XDisplay)), &c);
-    return c.pixel;
-}
+    struct WM_t         *W;
+    Window              win;
+    GC                  gc;
+    struct wmclient     *list[MAX_CLIENTS];
+    XFontStruct         *font;
+};
 
+#if 0
 static void draw_item_in_menu(struct WM_t *W, int xpos, int ypos, struct menu_item *I)
 {
     int txtW, txtH, tY;
@@ -131,7 +130,7 @@ static void load_menu_items(struct WM_t *W)
     W->rootMenu.items[2] = alloc_item("Chrome", "google-chrome");
 }
 
-void init_menu(struct WM_t *W)
+static void open_AT_window(struct WM_t *W)
 {
     Window win;
 
@@ -160,20 +159,48 @@ void init_menu(struct WM_t *W)
 
 #endif
 
-static int count_clients(struct WM_t *W)
+static void load_font_open_window(struct alttab *A)
 {
-    int i, n = 0;
+    ;
+}
+
+static struct wmclient *get_client_from_focus(struct WM_t *W, int f)
+{
+    int i;
     for (i = 0; i < MAX_CLIENTS; i++)
     {
-        if (W->clients[i] != NULL)
-            n++;
+        struct wmclient *C = W->clients[i];
+        if (C)
+        {
+            if (C->focus == f)
+                return C;
+        }
     }
-    return n;
+    return NULL;
+}
+
+static void sort_by_focus_order(struct alttab *A)
+{
+    int f;
+    for (f = 0; f < A->W->nclients; f++)
+    {
+        struct wmclient *C = get_client_from_focus(A->W, f);
+        if (!C)
+        {
+            msg("???: Could not get window with focus %d - this is weird.\n", f);
+            continue;
+        }
+        printf("    -> %s\n", C->name);
+        A->list[f] = C;
+    }
 }
 
 void do_alttab(struct WM_t *W)
 {
-    int n = count_clients(W);
-    printf("Doing alt.tab, %d clients\n", n);
+    struct alttab A;
+    A.W = W;
+
+    sort_by_focus_order(&A);
+    load_font_open_window(&A);
 }
 

@@ -38,6 +38,7 @@ int client_insert(struct WM_t *W, struct wmclient *C)
         {
             W->clients[i] = C;
             msg("Client \'%s\' inserted at %d\n", C->name, i);
+            W->nclients++;
             return i;
         }
     }
@@ -63,6 +64,14 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
                 GrabModeAsync, GrabModeSync, None, None);
 }
 
+static void set_border_colour(struct WM_t *W, struct wmclient *C, int focus)
+{
+    if (focus)
+        XSetWindowBorder(W->XDisplay, C->win, W->focus_border_colour);
+    else
+        XSetWindowBorder(W->XDisplay, C->win, W->black);
+}
+
 /* Set a 1-pixel border and position it at the size/pos in C */
 static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
 {
@@ -70,8 +79,11 @@ static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
     XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
     msg("Border added\n");
     /* Set the colour */
-    XSetWindowBorder(W->XDisplay, C->win, BlackPixel(W->XDisplay, W->XScreen));
-    msg("colour changed\n");
+
+    if (C->focus == 0)
+        set_border_colour(W, C, 1);
+    else
+        set_border_colour(W, C, 0);
 
     XMoveResizeWindow(W->XDisplay, C->win, C->x, C->y, C->w, C->h);
     msg("Resized and moved\n");
@@ -88,15 +100,21 @@ void client_focus(struct WM_t *W, struct wmclient *C)
         struct wmclient *D = W->clients[i];
         if (D)
         {
-            /* If it was the old focus it has its click-grab turned off; reenable it */
+            /* Unfocus the old window */
             if (D->focus == 0)
+            {
+                /* Re-enable grabbing for click events */
                 XGrabButton(W->XDisplay, Button1, 0, D->win, 1, ButtonPressMask,
                             GrabModeAsync, GrabModeSync, None, None);
-            if (D->focus > C->focus)
-                D->focus--;
+                /* Make the border boring */
+                set_border_colour(W, D, 0);
+            }
+            if (D->focus < C->focus)
+                D->focus++;
         }
     }
     C->focus = 0;
+    set_border_colour(W, C, 1);
     XRaiseWindow(W->XDisplay, C->win);
     XSetInputFocus(W->XDisplay, C->win, RevertToPointerRoot, CurrentTime);
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
@@ -146,7 +164,7 @@ void client_register(struct WM_t *W, Window xwindow_id)
     C->fullscreen = 0;
 
     set_size_pos_border(W, C);
-        
+
     client_select_events(W, C);
     msg("Buttons grabbed\n");
 
@@ -190,13 +208,30 @@ struct wmclient *client_from_window(struct WM_t *W, Window id)
 
 void client_remove(struct WM_t *W, struct wmclient *C)
 {
-    int i = get_client_index(W, C->win);
+    int idx = get_client_index(W, C->win), i;
+    struct wmclient *newfocus;
 
-    assert(W->clients[i] == C);
+    assert(W->clients[idx] == C);
+
+    /* Update all the focus numbers, i.e. decrease (bring forward) all the windows
+       with bigger focus numbers. */
+    for (i = 0; i < MAX_CLIENTS; i++)
+    {
+        struct wmclient *D = W->clients[i];
+        if (D)
+        {
+            if (D->focus > C->focus)
+                D->focus--;
+            if (D->focus == 0)
+                newfocus = D;
+        }
+    }
+    client_focus(W, newfocus);
 
     msg("Removing client \'%s\'\n", C->name);
     free(C->name);
     free(C);
-    W->clients[i] = NULL;
+    W->clients[idx] = NULL;
+    W->nclients--;
 }
 
