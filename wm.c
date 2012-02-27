@@ -356,6 +356,7 @@ static void init_state(struct WM_t *W)
     W->nclients = 0;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
+    W->font = NULL;
 }
 
 int main(void)

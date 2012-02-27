@@ -6,9 +6,10 @@
 #include <X11/Xutil.h>
 
 #define MAX_CLIENTS 64
-#define KEY_Q 24
-#define KEY_ALT 64
-#define KEY_WIN 133
+
+#define ALT_TAB_CHARACTERS 16
+#define ALT_TAB_FONTNAME "fixed"
+#define ALT_TAB_FONTNAME_OLD "-*-helvetica-*-10-*"
 
 #define HELVETICA_11 "*helvetica*11*"
 #define HELVETICA_12 "*helvetica*12*"

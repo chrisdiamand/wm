@@ -13,7 +13,9 @@ struct alttab
 {
     struct WM_t         *W;
     Window              win;
+    int                 w, h, x, y;
     GC                  gc;
+    unsigned long       inputeventmask;
     struct wmclient     *list[MAX_CLIENTS];
     XFontStruct         *font;
 };
@@ -111,25 +113,6 @@ outside_loop:
     hide_menu(W);
 }
 
-static struct menu_item alloc_item(char *name, char *cmd)
-{
-    struct menu_item i;
-    i.name = name;
-    i.command = cmd;
-    i.sub = NULL;
-    return i;
-}
-
-static void load_menu_items(struct WM_t *W)
-{
-    W->rootMenu.n = 3;
-    W->rootMenu.prev = NULL;
-    W->rootMenu.items = malloc(sizeof(struct menu_item) * W->rootMenu.n);
-    W->rootMenu.items[0] = alloc_item("xterm", "xterm");
-    W->rootMenu.items[1] = alloc_item("konsole", "konsole");
-    W->rootMenu.items[2] = alloc_item("Chrome", "google-chrome");
-}
-
 static void open_AT_window(struct WM_t *W)
 {
     Window win;
@@ -143,15 +126,7 @@ static void open_AT_window(struct WM_t *W)
 
     W->item_height = 20;
 
-    /* Create the window */
-    win = XCreateSimpleWindow(W->XDisplay, W->rootWindow,
-                              0, 0, W->menuW, W->menuH, 0,
-                              BlackPixel(W->XDisplay, W->XScreen),
-                              WhitePixel(W->XDisplay, W->XScreen));
-    /* Get events */
-    XSelectInput(W->XDisplay, win, KeyPressMask | ExposureMask);
-
-    W->menu_win = win;
+       W->menu_win = win;
 
     W->font = XLoadQueryFont(W->XDisplay, HELVETICA_12);
     assert(W->font);
@@ -159,9 +134,62 @@ static void open_AT_window(struct WM_t *W)
 
 #endif
 
+static void draw_alttab(struct alttab *A)
+{
+    printf("Drawing alttab!\n");
+}
+
+static void alttab_events(struct alttab *A)
+{
+    XEvent ev;
+
+    while (1)
+    {
+        XWindowEvent(A->W->XDisplay, A->win, A->inputeventmask, &ev);
+        switch (ev.type)
+        {
+            case KeyPress:
+                return;
+                break;
+            case Expose:
+                draw_alttab(A);
+                break;
+        }
+    }
+}
+
 static void load_font_open_window(struct alttab *A)
 {
-    ;
+    struct WM_t *W = A->W;
+    XCharStruct max_char;
+
+    if (!W->font)
+        W->font = XLoadQueryFont(W->XDisplay, ALT_TAB_FONTNAME);
+
+    max_char = W->font->max_bounds;
+    A->h = (max_char.ascent + max_char.descent + 2) * W->nclients;
+    A->w = (max_char.rbearing - max_char.lbearing) * ALT_TAB_CHARACTERS;
+
+    A->x = (W->rW - A->w - 2) / 2;
+    A->y = (W->rH - A->h - 2) / 2;
+
+    A->inputeventmask = KeyPressMask | ExposureMask;
+
+    msg("Creating window at %d, %d, size %dx%d\n", A->x, A->y, A->w, A->h);
+
+    /* Create the window */
+    A->win = XCreateSimpleWindow(W->XDisplay, W->rootWindow,
+                                 A->x, A->y, A->w, A->h, 1,
+                                 BlackPixel(W->XDisplay, W->XScreen),
+                                 WhitePixel(W->XDisplay, W->XScreen));
+    /* Get events */
+    XSelectInput(W->XDisplay, A->win, A->inputeventmask);
+
+    A->gc = XCreateGC(W->XDisplay, A->win, 0, NULL);
+ 
+    XMapWindow(W->XDisplay, A->win);
+    XRaiseWindow(W->XDisplay, A->win);
+    XSetInputFocus(W->XDisplay, A->win, RevertToPointerRoot, CurrentTime);
 }
 
 static struct wmclient *get_client_from_focus(struct WM_t *W, int f)
@@ -195,6 +223,15 @@ static void sort_by_focus_order(struct alttab *A)
     }
 }
 
+static void clean_up_alttab(struct alttab *A)
+{
+    XFreeGC(A->W->XDisplay, A->gc);
+    XDestroyWindow(A->W->XDisplay, A->win);
+    if (A->list[0])
+        client_focus(A->W, A->list[0]);
+    msg("Cleaned up.\n");
+}
+
 void do_alttab(struct WM_t *W)
 {
     struct alttab A;
@@ -202,5 +239,7 @@ void do_alttab(struct WM_t *W)
 
     sort_by_focus_order(&A);
     load_font_open_window(&A);
+    alttab_events(&A);
+    clean_up_alttab(&A);
 }
 
