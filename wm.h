@@ -23,7 +23,6 @@ struct wmclient
     Window              win;
     int                 x, y, w, h;
     int                 fullscreen;
-    int                 focus;
 };
 
 /* Hold state info about the WM */
@@ -43,8 +42,7 @@ struct WM_t
     /* Maximum distance for snapping to borders during window moves */
     int                 snapwidth;
 
-    /* List of open windows/programs. Too lazy to do a linked list so
-     * bodged fixed array thingy for now. */
+    /* List of open windows/programs, sorted in focus order. */
     struct wmclient     *clients[MAX_CLIENTS];
     int                 nclients;
 

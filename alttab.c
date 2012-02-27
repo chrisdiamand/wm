@@ -192,37 +192,6 @@ static void load_font_open_window(struct alttab *A)
     XSetInputFocus(W->XDisplay, A->win, RevertToPointerRoot, CurrentTime);
 }
 
-static struct wmclient *get_client_from_focus(struct WM_t *W, int f)
-{
-    int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        struct wmclient *C = W->clients[i];
-        if (C)
-        {
-            if (C->focus == f)
-                return C;
-        }
-    }
-    return NULL;
-}
-
-static void sort_by_focus_order(struct alttab *A)
-{
-    int f;
-    for (f = 0; f < A->W->nclients; f++)
-    {
-        struct wmclient *C = get_client_from_focus(A->W, f);
-        if (!C)
-        {
-            msg("???: Could not get window with focus %d - this is weird.\n", f);
-            continue;
-        }
-        printf("    -> %s\n", C->name);
-        A->list[f] = C;
-    }
-}
-
 static void clean_up_alttab(struct alttab *A)
 {
     XFreeGC(A->W->XDisplay, A->gc);
@@ -237,7 +206,6 @@ void do_alttab(struct WM_t *W)
     struct alttab A;
     A.W = W;
 
-    sort_by_focus_order(&A);
     load_font_open_window(&A);
     alttab_events(&A);
     clean_up_alttab(&A);

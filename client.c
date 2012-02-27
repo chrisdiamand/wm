@@ -10,6 +10,14 @@
 #include "policy.h"
 #include "wm.h"
 
+static void print_clients(struct WM_t *W)
+{
+    int i;
+    msg("%d clients:\n", W->nclients);
+    for (i = 0; i < W->nclients; i++)
+        msg("    -> \'%s\'\n", W->clients[i]->name);
+}
+
 static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
 {
     XConfigureEvent e;
@@ -28,21 +36,14 @@ static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
     msg("configurenotify sent\n");
 }
 
-/* Add a new client to the list */
-int client_insert(struct WM_t *W, struct wmclient *C)
+/* Move all clients with focus position between start end down the list,
+   overwriting the one at end */
+static void move_down_client_list(struct WM_t *W, int start, int end)
 {
     int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        if (W->clients[i] == NULL)
-        {
-            W->clients[i] = C;
-            msg("Client \'%s\' inserted at %d\n", C->name, i);
-            W->nclients++;
-            return i;
-        }
-    }
-    return -1;
+    for (i = end - 1; i >= start; i--)
+        W->clients[i + 1] = W->clients[i];
+    W->clients[start] = NULL;
 }
 
 void client_select_events(struct WM_t *W, struct wmclient *C)
@@ -80,7 +81,7 @@ static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
     msg("Border added\n");
     /* Set the colour */
 
-    if (C->focus == 0)
+    if (W->clients[0] == C)
         set_border_colour(W, C, 1);
     else
         set_border_colour(W, C, 0);
@@ -89,35 +90,44 @@ static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
     msg("Resized and moved\n");
 }
 
-void client_focus(struct WM_t *W, struct wmclient *C)
+static int get_client_index(struct WM_t *W, Window id)
 {
     int i;
-    printf("Focus %s!\n", C->name);
-    /* Go through all the clients and decrease their focus number.
-       0 is the window in focus */
     for (i = 0; i < MAX_CLIENTS; i++)
     {
-        struct wmclient *D = W->clients[i];
-        if (D)
+        struct wmclient *C = W->clients[i];
+        /* Don't test null entries */
+        if (C != NULL)
         {
-            /* Unfocus the old window */
-            if (D->focus == 0)
-            {
-                /* Re-enable grabbing for click events */
-                XGrabButton(W->XDisplay, Button1, 0, D->win, 1, ButtonPressMask,
-                            GrabModeAsync, GrabModeSync, None, None);
-                /* Make the border boring */
-                set_border_colour(W, D, 0);
-            }
-            if (D->focus < C->focus)
-                D->focus++;
+            if (C->win == id)
+                return i;
         }
     }
-    C->focus = 0;
+    return -1;
+}
+
+void client_focus(struct WM_t *W, struct wmclient *C)
+{
+    int oldidx = get_client_index(W, C->win);
+    struct wmclient *old = W->clients[0];
+    printf("Focus %s!\n", C->name);
+
+    move_down_client_list(W, 0, oldidx);
+    W->clients[0] = C;
+
+    /* Unfocus the old window */
+    /* Re-enable grabbing for click events */
+    XGrabButton(W->XDisplay, Button1, 0, old->win, 1, ButtonPressMask,
+                GrabModeAsync, GrabModeSync, None, None);
+    /* Make the border boring */
+    set_border_colour(W, old, 0);
+
     set_border_colour(W, C, 1);
     XRaiseWindow(W->XDisplay, C->win);
     XSetInputFocus(W->XDisplay, C->win, RevertToPointerRoot, CurrentTime);
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
+
+    print_clients(W);
 }
 
 static void maximise(struct WM_t *W, struct wmclient *C)
@@ -172,29 +182,13 @@ void client_register(struct WM_t *W, Window xwindow_id)
     XMapWindow(W->XDisplay, C->win);
     msg("Mapped\n");
 
+    W->clients[W->nclients++] = C;
+
     client_focus(W, C);
 
     XFlush(W->XDisplay);
 
-    client_insert(W, C);
-}
-
-static int get_client_index(struct WM_t *W, Window id)
-{
-    int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        struct wmclient *C = W->clients[i];
-        /* Don't test null entries */
-        if (C != NULL)
-        {
-            if (C->win == id)
-            {
-                return i;
-            }
-        }
-    }
-    return -1;
+    print_clients(W);
 }
 
 /* Find a wmclient structure from its window ID */
@@ -209,29 +203,21 @@ struct wmclient *client_from_window(struct WM_t *W, Window id)
 void client_remove(struct WM_t *W, struct wmclient *C)
 {
     int idx = get_client_index(W, C->win), i;
-    struct wmclient *newfocus;
 
     assert(W->clients[idx] == C);
 
     /* Update all the focus numbers, i.e. decrease (bring forward) all the windows
        with bigger focus numbers. */
-    for (i = 0; i < MAX_CLIENTS; i++)
-    {
-        struct wmclient *D = W->clients[i];
-        if (D)
-        {
-            if (D->focus > C->focus)
-                D->focus--;
-            if (D->focus == 0)
-                newfocus = D;
-        }
-    }
-    client_focus(W, newfocus);
+    for (i = idx; i < W->nclients; i++)
+        W->clients[i] = W->clients[i + 1];
+    W->nclients--;
 
     msg("Removing client \'%s\'\n", C->name);
     free(C->name);
     free(C);
-    W->clients[idx] = NULL;
-    W->nclients--;
+
+    print_clients(W);
+
+    client_focus(W, W->clients[0]);
 }
 
