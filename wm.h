@@ -7,15 +7,26 @@
 
 #define MAX_CLIENTS 64
 
-#define ALT_TAB_CHARACTERS 16
+#define ALT_TAB_CHARACTERS 32
 #define ALT_TAB_FONTNAME "fixed"
-#define ALT_TAB_FONTNAME_OLD "-*-helvetica-*-10-*"
+#define ALT_TAB_FONTNAME__ "-*-helvetica-*-22-*"
 
 #define HELVETICA_11 "*helvetica*11*"
 #define HELVETICA_12 "*helvetica*12*"
 #define COURIER_11 "*courier*11*"
 #define COURIER_12 "*courier*12*"
 
+struct alttab_t
+{
+    Window              win;
+    int                 w, h, x, y;
+    int                 item_height;
+    GC                  gc;
+    unsigned long       inputeventmask;
+    XFontStruct         *font;
+    /* Index of currently selected window */
+    int                 selected;
+};
 
 struct wmclient
 {
@@ -46,10 +57,10 @@ struct WM_t
     struct wmclient     *clients[MAX_CLIENTS];
     int                 nclients;
 
-    /* Font to use */
-    XFontStruct         *font;
+    /* Info about the Alt-Tab switcher window */
+    struct alttab_t     AT;
 
-    unsigned long       black, white, focus_border_colour;
+    unsigned long       black, lightgrey, white, focus_border_colour;
 };
 
 void do_alttab(struct WM_t *);
@@ -62,6 +73,10 @@ struct wmclient *client_from_window(struct WM_t *, Window);
 void client_togglefullscreen(struct WM_t *W, struct wmclient *C);
 void client_focus(struct WM_t *W, struct wmclient *C);
 void client_remove(struct WM_t *, struct wmclient *);
+
+/* Functions from alttab.c */
+void alttab(struct WM_t *);
+void alttab_init(struct WM_t *);
 
 /* Functions from event.c */
 char *event_name(int);

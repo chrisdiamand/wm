@@ -9,171 +9,164 @@
 
 #include "wm.h"
 
-struct alttab
+#define AT_BORDER 5
+
+static void draw_item_text(struct WM_t *W, char *text, int topcorner)
 {
-    struct WM_t         *W;
-    Window              win;
-    int                 w, h, x, y;
-    GC                  gc;
-    unsigned long       inputeventmask;
-    struct wmclient     *list[MAX_CLIENTS];
-    XFontStruct         *font;
-};
+    struct alttab_t *A = &(W->AT);
+    int text_w = XTextWidth(A->font, text, strlen(text));
+    int text_h = A->font->ascent + A->font->descent;
+    int x, y;
 
-#if 0
-static void draw_item_in_menu(struct WM_t *W, int xpos, int ypos, struct menu_item *I)
-{
-    int txtW, txtH, tY;
-    char *txt = I->name;
-    GC gc = XCreateGC(W->XDisplay, W->menu_win, 0, NULL);
+    if (text_w < A->w) /* Centre it if it will fit */
+        x = (A->w - text_w) / 2;
+    else
+        x = 4;
 
-    XSetFont(W->XDisplay, gc, W->font->fid);
+    y = topcorner + (A->item_height + text_h) / 2 - A->font->descent - 1;
+    XDrawString(W->XDisplay, A->win, A->gc, x, y, text, strlen(text));
 
-    txtW = XTextWidth(W->font, txt, strlen(txt));
-    txtH = W->font->ascent;
-
-    tY = ypos + (W->item_height / 2) + (txtH / 2) - 1;
-
-    XDrawString(W->XDisplay, W->menu_win, gc, xpos, tY, txt, strlen(txt));
-    XFreeGC(W->XDisplay, gc);
 }
 
-static void draw_menu(struct WM_t *W)
+static void draw_alttab(struct WM_t *W)
 {
-    unsigned int bgcol;
-    GC gc;
-    Window win = W->menu_win;
+    struct alttab_t *A = &(W->AT);
     int i;
 
-    bgcol = makeColourPixel(W, 0.8, 0.8, 0.8);
+    /* Draw a grey background */
+    XSetForeground(W->XDisplay, A->gc, W->lightgrey);
+    XFillRectangle(W->XDisplay, A->win, A->gc, 0, 0, A->w, A->h);
+    XSetForeground(W->XDisplay, A->gc, W->black);
 
-    printf("Root is %d x %d\n", W->rW, W->rH);
-
-    gc = XCreateGC(W->XDisplay, win, 0, NULL);
-    XSetForeground(W->XDisplay, gc, bgcol);
-    XFillRectangle(W->XDisplay, win, gc, 0, 0, W->menuW, W->menuH);
-
-    XSetForeground(W->XDisplay, gc, makeColourPixel(W, 0, 0, 0));
-    XDrawLine(W->XDisplay, W->menu_win, gc, 300, 0, 300, W->menuH);
-
-    for (i = 0; i < W->currMenu->n; i++)
+    for (i = 0; i < W->nclients; i++)
     {
-        draw_item_in_menu(W, 0, i * W->item_height, &(W->currMenu->items[i]));
+        if (i == A->selected)
+        {
+            /* Black background with white text for the selected one */
+            XSetForeground(W->XDisplay, A->gc, W->black);
+            XFillRectangle(W->XDisplay, A->win, A->gc,
+                           AT_BORDER, A->item_height * i + AT_BORDER,
+                           A->w - 2 * AT_BORDER, A->item_height);
+            XSetForeground(W->XDisplay, A->gc, W->white);
+        }
+        draw_item_text(W, W->clients[i]->name, W->AT.item_height * i + AT_BORDER);
+        /* Restore black text as the next one drawn will be unselected */
+        if (i == A->selected)
+            XSetForeground(W->XDisplay, A->gc, W->black);
     }
-    XFlush(W->XDisplay);
 }
 
-static int menu_key_pressed(struct WM_t *W, XEvent *ev)
+static int alttab_key_event(struct WM_t *W, XEvent *ev)
 {
-    switch (ev->xkey.keycode)
+    struct alttab_t *A = &(W->AT);
+    KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
+
+    /* Alt released so focus the selected window and quit the switcher */
+    if (!(ev->xkey.state & Mod1Mask) ||
+        (ev->type == KeyRelease && sym == XK_Alt_L))
     {
-        case KEY_WIN:
-        case KEY_Q:
-            /* Return 1 if we quit the menu */
-            return 1;
+        msg("Alt released.\n");
+        client_focus(W, W->clients[W->AT.selected]);
+        return -1;
+    }
+
+    switch (sym)
+    {
+        case XK_Tab:
+            msg("********* Tab!\n");
+            if (ev->type == KeyPress)
+            {
+                if (ev->xkey.state & ShiftMask)
+                    A->selected--;
+                else
+                    A->selected++;
+
+                if (A->selected >= W->nclients)
+                    A->selected -= W->nclients;
+                if (A->selected < 0)
+                    A->selected = W->nclients - 1;
+
+                msg("Tab: client %d\n", W->AT.selected);
+                draw_alttab(W);
+            }
+            break;
+        /* If escape pressed don't change the focus */
+        case XK_Escape:
+            msg("Escape!\n");
+            return -1;
     }
     return 0;
 }
 
-/* Hide the menu window */
-static void hide_menu(struct WM_t *W)
-{
-    XUnmapWindow(W->XDisplay, W->menu_win);
-}
-
-/* Show the menu window */
-static void show_menu(struct WM_t *W)
-{
-    XMapWindow(W->XDisplay, W->menu_win);
-}
-
-void do_menu(struct WM_t *W)
-{
-    XEvent ev;
-
-    show_menu(W);
-
-    while (1)
-    {
-        XNextEvent(W->XDisplay, &ev);
-        switch (ev.type)
-        {
-            case KeyPress:
-                /* Break the loop if the menu is exited */
-                if (menu_key_pressed(W, &ev));
-                    goto outside_loop;
-                break;
-            case Expose:
-                draw_menu(W);
-                break;
-        }
-    }
-outside_loop:
-    
-    hide_menu(W);
-}
-
-static void open_AT_window(struct WM_t *W)
-{
-    Window win;
-
-    load_menu_items(W);
-    W->currMenu = &(W->rootMenu);
-
-    /* Set the menu widths and heights */
-    W->menuW = W->rW - 80;
-    W->menuH = W->rH - 50;
-
-    W->item_height = 20;
-
-       W->menu_win = win;
-
-    W->font = XLoadQueryFont(W->XDisplay, HELVETICA_12);
-    assert(W->font);
-}
-
-#endif
-
-static void draw_alttab(struct alttab *A)
-{
-    printf("Drawing alttab!\n");
-}
-
-static void alttab_events(struct alttab *A)
+static void alttab_events(struct WM_t *W)
 {
     XEvent ev;
 
     while (1)
     {
-        XWindowEvent(A->W->XDisplay, A->win, A->inputeventmask, &ev);
+        XWindowEvent(W->XDisplay, W->AT.win, W->AT.inputeventmask, &ev);
         switch (ev.type)
         {
             case KeyPress:
-                return;
+            case KeyRelease:
+                if (alttab_key_event(W, &ev) == -1)
+                    return;
                 break;
             case Expose:
-                draw_alttab(A);
+                draw_alttab(W);
                 break;
         }
     }
 }
 
-static void load_font_open_window(struct alttab *A)
+static void alttab_show(struct WM_t *W)
 {
-    struct WM_t *W = A->W;
     XCharStruct max_char;
+    struct alttab_t *A = &(W->AT);
 
-    if (!W->font)
-        W->font = XLoadQueryFont(W->XDisplay, ALT_TAB_FONTNAME);
+    assert(A->font);
 
-    max_char = W->font->max_bounds;
-    A->h = (max_char.ascent + max_char.descent + 2) * W->nclients;
-    A->w = (max_char.rbearing - max_char.lbearing) * ALT_TAB_CHARACTERS;
+    /* Calculate the window size */
+    max_char = A->font->max_bounds;
+    A->item_height = (max_char.ascent + max_char.descent) * 1.5;
+    A->h = A->item_height * W->nclients + 2 * AT_BORDER;
+    A->w = (max_char.rbearing - max_char.lbearing) * ALT_TAB_CHARACTERS + 2 * AT_BORDER;
 
-    A->x = (W->rW - A->w - 2) / 2;
-    A->y = (W->rH - A->h - 2) / 2;
+    A->x = (W->rW - A->w - 2) / 2 - AT_BORDER;
+    A->y = (W->rH - A->h - 2) / 2 - AT_BORDER;
 
-    A->inputeventmask = KeyPressMask | ExposureMask;
+    XMoveResizeWindow(W->XDisplay, A->win, A->x, A->y, A->w, A->h);
+    XMapWindow(W->XDisplay, A->win);
+    XRaiseWindow(W->XDisplay, A->win);
+    XSetInputFocus(W->XDisplay, A->win, RevertToPointerRoot, CurrentTime);
+}
+
+static void alttab_hide(struct WM_t *W)
+{
+    if (W->clients[0])
+        client_focus(W, W->clients[0]);
+    XUnmapWindow(W->XDisplay, W->AT.win);
+}
+
+void alttab(struct WM_t *W)
+{
+    if (W->nclients > 1)
+        W->AT.selected = 1;
+    else
+        W->AT.selected = 0;
+
+    alttab_show(W);
+    alttab_events(W);
+    alttab_hide(W);
+}
+
+void alttab_init(struct WM_t *W)
+{
+    struct alttab_t *A = &(W->AT);
+    /* The window will be resized every time it is shown so these are just to
+     * let it be created */
+    A->x = 1;   A->y = 1;   A->w = 10;   A->h = 10;
+    A->inputeventmask = KeyPressMask | KeyReleaseMask | KeymapStateMask | ExposureMask;
 
     msg("Creating window at %d, %d, size %dx%d\n", A->x, A->y, A->w, A->h);
 
@@ -185,29 +178,14 @@ static void load_font_open_window(struct alttab *A)
     /* Get events */
     XSelectInput(W->XDisplay, A->win, A->inputeventmask);
 
+    A->font = XLoadQueryFont(W->XDisplay, ALT_TAB_FONTNAME);
+    if (!A->font)
+    {
+        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", ALT_TAB_FONTNAME);
+        A->font = XLoadQueryFont(W->XDisplay, "fixed");
+    }
+
     A->gc = XCreateGC(W->XDisplay, A->win, 0, NULL);
- 
-    XMapWindow(W->XDisplay, A->win);
-    XRaiseWindow(W->XDisplay, A->win);
-    XSetInputFocus(W->XDisplay, A->win, RevertToPointerRoot, CurrentTime);
-}
-
-static void clean_up_alttab(struct alttab *A)
-{
-    XFreeGC(A->W->XDisplay, A->gc);
-    XDestroyWindow(A->W->XDisplay, A->win);
-    if (A->list[0])
-        client_focus(A->W, A->list[0]);
-    msg("Cleaned up.\n");
-}
-
-void do_alttab(struct WM_t *W)
-{
-    struct alttab A;
-    A.W = W;
-
-    load_font_open_window(&A);
-    alttab_events(&A);
-    clean_up_alttab(&A);
+    XSetFont(W->XDisplay, A->gc, A->font->fid);
 }
 

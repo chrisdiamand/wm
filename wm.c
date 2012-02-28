@@ -131,6 +131,7 @@ static void make_colours(struct WM_t *W)
 {
     W->black = BlackPixel(W->XDisplay, W->XScreen);
     W->white = WhitePixel(W->XDisplay, W->XScreen);
+    W->lightgrey = colour_from_rgb(W, 0.8, 0.8, 0.8);
     W->focus_border_colour = colour_from_rgb(W, 0.5, 0.5, 0.9);
 }
 
@@ -189,7 +190,7 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
             msg("Alt!\n");
             break;
         case XK_Tab:
-            do_alttab(W);
+            alttab(W);
             break;
         case XK_f:
             if ((ev->xkey.state & Mod1Mask) && (ev->xkey.state & ShiftMask))
@@ -288,14 +289,16 @@ static void event_loop(struct WM_t *W)
                 if (C && (ev.xbutton.state & (Button1Mask | Mod1Mask)))
                     move_client_window(W, C, ev.xbutton.x, ev.xbutton.y);
                 /* A normal click to focus a window */
-                if (C && ev.xbutton.state == 0)
+                else if (C && ev.xbutton.state == 0)
                     client_focus(W, C);
                 else if (C)
                     XRaiseWindow(W->XDisplay, C->win);
                 break;
             case MapRequest: /* Does not use CreateNotify */
                 msg("Map request\n");
-                if (!C) /* Don't register it again if it was just hiding for some reason */
+                /* Don't register it again if it was just hiding for some reason
+                   or if it's the Alt-Tab switcher window */
+                if (!C && ev.xany.window != W->AT.win)
                     client_register(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);
@@ -356,7 +359,6 @@ static void init_state(struct WM_t *W)
     W->nclients = 0;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
-    W->font = NULL;
 }
 
 int main(void)
@@ -373,6 +375,7 @@ int main(void)
     init_state(&W);
     open_display(&W);
     find_open_windows(&W);
+    alttab_init(&W);
     event_loop(&W);
 
     return 0;
