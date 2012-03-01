@@ -46,6 +46,12 @@ static void move_down_client_list(struct WM_t *W, int start, int end)
     W->clients[start] = NULL;
 }
 
+static void grabkey(struct WM_t *W, struct wmclient *C, KeySym sym, unsigned int mods)
+{
+    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, sym),
+             mods, C->win, 0, GrabModeAsync, GrabModeAsync);
+}
+
 void client_select_events(struct WM_t *W, struct wmclient *C)
 {
     XSelectInput(W->XDisplay, C->win, StructureNotifyMask);
@@ -54,15 +60,19 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
     XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
-    /* Alt-Tab */
-    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, XK_Tab),
-             Mod1Mask, C->win, 0, GrabModeAsync, GrabModeAsync);
-    /* Shift-alt-F for fullscreen */
-    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, XK_f),
-             ShiftMask | Mod1Mask, C->win, 0, GrabModeAsync, GrabModeAsync);
     /* Grab for any click so if it is clicked on it can be refocused */
     XGrabButton(W->XDisplay, Button1, 0, C->win, 1, ButtonPressMask,
                 GrabModeAsync, GrabModeSync, None, None);
+
+    /* Alt-Tab */
+    grabkey(W, C, XK_Tab, Mod1Mask);
+    /* Shift-alt-F for fullscreen */
+    grabkey(W, C, XK_f, ShiftMask | Mod1Mask);
+    /* Shift-alt-arrows for tiling */
+    grabkey(W, C, XK_Up, ShiftMask | Mod1Mask);
+    grabkey(W, C, XK_Down, ShiftMask | Mod1Mask);
+    grabkey(W, C, XK_Left, ShiftMask | Mod1Mask);
+    grabkey(W, C, XK_Right, ShiftMask | Mod1Mask);
 }
 
 static void set_border_colour(struct WM_t *W, struct wmclient *C, int focus)
@@ -128,6 +138,25 @@ void client_focus(struct WM_t *W, struct wmclient *C)
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
 
     print_clients(W);
+}
+
+/* Move and resize a window, saving the new dimensions. Negative sizes mean maximise */
+void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, int h)
+{
+    if (C->fullscreen)
+        return;
+
+    if (w > W->rW || w < 0)
+        w = W->rW - 2 * W->bsize;
+    if (h > W->rH || h < 0)
+        h = W->rH - 2 * W->bsize;
+
+    C->x = x;
+    C->y = y;
+    C->w = w;
+    C->h = h;
+
+    XMoveResizeWindow(W->XDisplay, C->win, x, y, w, h);
 }
 
 static void maximise(struct WM_t *W, struct wmclient *C)

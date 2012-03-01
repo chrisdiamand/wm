@@ -104,7 +104,12 @@ static void alttab_events(struct WM_t *W)
 
     while (1)
     {
-        XWindowEvent(W->XDisplay, W->AT.win, W->AT.inputeventmask, &ev);
+        /*
+        if (!XCheckTypedEvent(W->XDisplay, KeyRelease, &ev))
+            XWindowEvent(W->XDisplay, W->AT.win, W->AT.inputeventmask, &ev);
+            */
+        XMaskEvent(W->XDisplay, W->AT.inputeventmask, &ev);
+        printf("Event: %s, window %lu\n", event_name(ev.type), ev.xany.window);
         switch (ev.type)
         {
             case KeyPress:

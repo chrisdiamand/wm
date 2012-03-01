@@ -132,7 +132,7 @@ static void make_colours(struct WM_t *W)
     W->black = BlackPixel(W->XDisplay, W->XScreen);
     W->white = WhitePixel(W->XDisplay, W->XScreen);
     W->lightgrey = colour_from_rgb(W, 0.8, 0.8, 0.8);
-    W->focus_border_colour = colour_from_rgb(W, 0.5, 0.5, 0.9);
+    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.8, 0.0);
 }
 
 static void open_display(struct WM_t *W)
@@ -183,6 +183,8 @@ static void open_display(struct WM_t *W)
 /* XK_Super_L is win key */
 static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
+    /* Border size */
+    int B = W->bsize;
     KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
     switch (sym)
     {
@@ -195,6 +197,19 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
         case XK_f:
             if ((ev->xkey.state & Mod1Mask) && (ev->xkey.state & ShiftMask))
                 client_togglefullscreen(W, C);
+            break;
+        /* Tiling. -1 is for maximising in that dimension */
+        case XK_Up:
+            client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
+            break;
+        case XK_Down:
+            client_moveresize(W, C, 0, W->rH / 2 - B, -1, W->rH / 2 - B);
+            break;
+        case XK_Left:
+            client_moveresize(W, C, 0, 0, W->rW / 2 - 2 * B, -1);
+            break;
+        case XK_Right:
+            client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
             break;
         case XK_Super_L:
             msg("Win key\n");
