@@ -66,6 +66,8 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
 
     /* Alt-Tab */
     grabkey(W, C, XK_Tab, Mod1Mask);
+    /* Shift-alt-enter for menu */
+    grabkey(W, C, XK_Return, ShiftMask | Mod1Mask);
     /* Shift-alt-F for fullscreen */
     grabkey(W, C, XK_f, ShiftMask | Mod1Mask);
     /* Shift-alt-arrows for tiling */

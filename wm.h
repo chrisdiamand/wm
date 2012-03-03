@@ -7,7 +7,7 @@
 
 #define MAX_CLIENTS 64
 
-#define ALT_TAB_CHARACTERS 32
+#define ALT_TAB_CHARACTERS 42
 #define ALT_TAB_FONTNAME "fixed"
 #define ALT_TAB_FONTNAME__ "-*-helvetica-*-22-*"
 
@@ -44,6 +44,7 @@ struct WM_t
     int                 XScreen;
     Window              rootWindow;
     GC                  rootGC;
+    Cursor              rootCursor;
 
     /* Root window width and height */
     unsigned int        rW, rH;

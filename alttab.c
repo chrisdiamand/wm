@@ -21,7 +21,7 @@ static void draw_item_text(struct WM_t *W, char *text, int topcorner)
     if (text_w < A->w) /* Centre it if it will fit */
         x = (A->w - text_w) / 2;
     else
-        x = 4;
+        x = AT_BORDER + 4; /* 4 is an arbitrary gap before the start of the text */
 
     y = topcorner + (A->item_height + text_h) / 2 - A->font->descent - 1;
     XDrawString(W->XDisplay, A->win, A->gc, x, y, text, strlen(text));
@@ -104,10 +104,6 @@ static void alttab_events(struct WM_t *W)
 
     while (1)
     {
-        /*
-        if (!XCheckTypedEvent(W->XDisplay, KeyRelease, &ev))
-            XWindowEvent(W->XDisplay, W->AT.win, W->AT.inputeventmask, &ev);
-            */
         XMaskEvent(W->XDisplay, W->AT.inputeventmask, &ev);
         printf("Event: %s, window %lu\n", event_name(ev.type), ev.xany.window);
         switch (ev.type)

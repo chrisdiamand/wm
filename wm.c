@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -132,7 +133,7 @@ static void make_colours(struct WM_t *W)
     W->black = BlackPixel(W->XDisplay, W->XScreen);
     W->white = WhitePixel(W->XDisplay, W->XScreen);
     W->lightgrey = colour_from_rgb(W, 0.8, 0.8, 0.8);
-    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.8, 0.0);
+    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.5, 0.0);
 }
 
 static void open_display(struct WM_t *W)
@@ -177,6 +178,11 @@ static void open_display(struct WM_t *W)
 
     XSetErrorHandler(error_handler);
 
+    /*
+    W->rootCursor = XCreateFontCursor(W->XDisplay, XC_top_left_arrow);
+    XDefineCursor(W->XDisplay, W->rootWindow, W->rootCursor);
+    */
+
     redraw_root(W, NULL);
 }
 
@@ -186,35 +192,33 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
     /* Border size */
     int B = W->bsize;
     KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
-    switch (sym)
+    if (sym == XK_Tab && (ev->xkey.state & Mod1Mask))
+        alttab(W);
+    
+    if (ev->xkey.state & (Mod1Mask | ShiftMask))
     {
-        case XK_Alt_L:
-            msg("Alt!\n");
-            break;
-        case XK_Tab:
-            alttab(W);
-            break;
-        case XK_f:
-            if ((ev->xkey.state & Mod1Mask) && (ev->xkey.state & ShiftMask))
+        switch (sym)
+        {
+            case XK_f:
                 client_togglefullscreen(W, C);
-            break;
-        /* Tiling. -1 is for maximising in that dimension */
-        case XK_Up:
-            client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
-            break;
-        case XK_Down:
-            client_moveresize(W, C, 0, W->rH / 2 - B, -1, W->rH / 2 - B);
-            break;
-        case XK_Left:
-            client_moveresize(W, C, 0, 0, W->rW / 2 - 2 * B, -1);
-            break;
-        case XK_Right:
-            client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
-            break;
-        case XK_Super_L:
-            msg("Win key\n");
-            system("dmenu_run &");
-            break;
+                break;
+            /* Tiling. -1 is for maximising in that dimension */
+            case XK_Up:
+                client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
+                break;
+            case XK_Down:
+                client_moveresize(W, C, 0, W->rH / 2 - B, -1, W->rH / 2 - B);
+                break;
+            case XK_Left:
+                client_moveresize(W, C, 0, 0, W->rW / 2 - 2 * B, -1);
+                break;
+            case XK_Right:
+                client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
+                break;
+            case XK_Return:
+                system("dmenu_run &");
+                break;
+        }
     }
 }
 
