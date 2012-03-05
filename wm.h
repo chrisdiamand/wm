@@ -8,7 +8,7 @@
 #define MAX_CLIENTS 64
 
 #define ALT_TAB_CHARACTERS 42
-#define ALT_TAB_FONTNAME "fixed"
+#define ALT_TAB_FONTNAME "*-courier-*"
 #define ALT_TAB_FONTNAME__ "-*-helvetica-*-22-*"
 
 #define HELVETICA_11 "*helvetica*11*"
@@ -65,6 +65,7 @@ struct WM_t
 };
 
 void do_alttab(struct WM_t *);
+void redraw_root(struct WM_t *, XEvent *);
 
 /* Functions from client.c */
 int client_insert(struct WM_t *, struct wmclient *);
@@ -82,6 +83,8 @@ void alttab_init(struct WM_t *);
 
 /* Functions from event.c */
 char *event_name(int);
+void event_expose(struct WM_t *, XEvent *);
+void event_move_window(struct WM_t *, struct wmclient *, int, int);
 
 /* Debugging function */
 int msg(char *, ...);

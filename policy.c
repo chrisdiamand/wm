@@ -18,43 +18,43 @@ void decide_new_window_size_pos(struct WM_t *W, Window xwinid, int *x, int *y, i
     /* Get actual position/size of window */
     XGetWindowAttributes(W->XDisplay, xwinid, &attr);
 
-    /* Get size hints */
-    XGetWMNormalHints(W->XDisplay, xwinid, &hints, &user_hints);
-    printf("Hints: flags = %ld\n", hints.flags);
-    printf("      w = %d,     h = %d\n", hints.width, hints.height);
-    printf("  min_w = %d, min_h = %d\n", hints.min_width, hints.min_height);
-    printf("  max_w = %d, max_h = %d\n", hints.max_width, hints.max_height);
-    
-    /* Check if a hint size has been provided */
-    if ((hints.flags & PSize) || (hints.flags & USSize))
-    {
-        printf("Using hints\n");
-        *w = hints.width;
-        *h = hints.height;
-    }
-    else if (hints.flags & PMinSize)
-    {
-        if (attr.width < hints.min_width)
-            *w = hints.min_width;
-        if (attr.height < hints.min_height)
-            *h = hints.min_height;
-    }
-    else
-    {
-        *w = attr.width;
-        *h = attr.height;
-    }
+    *w = attr.width;
+    *h = attr.height;
 
-    /* Check if there is a hint position */
-    if ((hints.flags & PPosition) || (hints.flags & USPosition))
+    /* Get size hints */
+    if (XGetWMNormalHints(W->XDisplay, xwinid, &hints, &user_hints))
     {
-        *x = hints.x;
-        *y = hints.y;
-    }
-    else
-    {
-        *x = attr.x;
-        *y = attr.y;
+        printf("Hints: flags = %ld\n", hints.flags);
+        printf("      w = %d,     h = %d\n", hints.width, hints.height);
+        printf("  min_w = %d, min_h = %d\n", hints.min_width, hints.min_height);
+        printf("  max_w = %d, max_h = %d\n", hints.max_width, hints.max_height);
+        
+        /* Check if a hint size has been provided */
+        if ((hints.flags & PSize) || (hints.flags & USSize))
+        {
+            printf("Using hints\n");
+            *w = hints.width;
+            *h = hints.height;
+        }
+        else if (hints.flags & PMinSize)
+        {
+            if (attr.width < hints.min_width)
+                *w = hints.min_width;
+            if (attr.height < hints.min_height)
+                *h = hints.min_height;
+        }
+
+        /* Check if there is a hint position */
+        if ((hints.flags & PPosition) || (hints.flags & USPosition))
+        {
+            *x = hints.x;
+            *y = hints.y;
+        }
+        else
+        {
+            *x = attr.x;
+            *y = attr.y;
+        }
     }
 
     /* Don't let windows be larger than the root window */

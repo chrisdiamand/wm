@@ -48,8 +48,11 @@ static void move_down_client_list(struct WM_t *W, int start, int end)
 
 static void grabkey(struct WM_t *W, struct wmclient *C, KeySym sym, unsigned int mods)
 {
-    XGrabKey(W->XDisplay, XKeysymToKeycode(W->XDisplay, sym),
-             mods, C->win, 0, GrabModeAsync, GrabModeAsync);
+    KeyCode code = XKeysymToKeycode(W->XDisplay, sym);
+    XGrabKey(W->XDisplay, code, mods, C->win,
+             0, GrabModeAsync, GrabModeAsync);
+    XGrabKey(W->XDisplay, code, mods | LockMask, C->win,
+             0, GrabModeAsync, GrabModeAsync);
 }
 
 void client_select_events(struct WM_t *W, struct wmclient *C)
@@ -61,7 +64,7 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
     /* Grab for any click so if it is clicked on it can be refocused */
-    XGrabButton(W->XDisplay, Button1, 0, C->win, 1, ButtonPressMask,
+    XGrabButton(W->XDisplay, Button1, 0, C->win, 0, ButtonPressMask,
                 GrabModeAsync, GrabModeSync, None, None);
 
     /* Alt-Tab */
@@ -129,7 +132,7 @@ void client_focus(struct WM_t *W, struct wmclient *C)
 
     /* Unfocus the old window */
     /* Re-enable grabbing for click events */
-    XGrabButton(W->XDisplay, Button1, 0, old->win, 1, ButtonPressMask,
+    XGrabButton(W->XDisplay, Button1, 0, old->win, 0, ButtonPressMask,
                 GrabModeAsync, GrabModeSync, None, None);
     /* Make the border boring */
     set_border_colour(W, old, 0);
@@ -146,7 +149,7 @@ void client_focus(struct WM_t *W, struct wmclient *C)
 void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, int h)
 {
     if (C->fullscreen)
-        return;
+        C->fullscreen = 0;
 
     if (w > W->rW || w < 0)
         w = W->rW - 2 * W->bsize;

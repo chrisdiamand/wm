@@ -16,12 +16,6 @@
 struct WM_t *wm_state_for_quit = NULL;
 FILE *log_file = NULL;
 
-/* For some reason this won't work as a macro... */
-static int ABS(int n)
-{
-    return n >= 0 ? n : -n;
-}
-
 int msg(char *fmt, ...)
 {
     va_list ap;
@@ -49,7 +43,7 @@ int makeColourPixel(struct WM_t *W, double r, double g, double b)
     return c.pixel;
 }
 
-static void redraw_root(struct WM_t *W, XEvent *ev)
+void redraw_root(struct WM_t *W, XEvent *ev)
 {
     int bgcol;
     int x, y, w, h;
@@ -133,7 +127,7 @@ static void make_colours(struct WM_t *W)
     W->black = BlackPixel(W->XDisplay, W->XScreen);
     W->white = WhitePixel(W->XDisplay, W->XScreen);
     W->lightgrey = colour_from_rgb(W, 0.8, 0.8, 0.8);
-    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.5, 0.0);
+    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.7, 0.0);
 }
 
 static void open_display(struct WM_t *W)
@@ -222,72 +216,26 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
     }
 }
 
-static void expose_event(struct WM_t *W, XEvent *ev)
+static  void configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
-    if (ev->xexpose.window == W->rootWindow)
-        redraw_root(W, ev);
-}
+    XConfigureRequestEvent *conf = &(ev->xconfigurerequest);
+    printf("ConfigureRequest: border = %d\n", conf->border_width);
+    printf("    x, y = %d, %d\n", conf->x, conf->y);
+    printf("    w, h = %d, %d\n", conf->width, conf->height);
 
-/* Move a window. It has been clicked at coordinates (xOff, yOff) relative to
- * the top-left corner of the client. */
-static void move_client_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
-{
-    XEvent ev;
-    long mask = ButtonReleaseMask   |
-                ButtonMotionMask    |
-                ExposureMask        |
-                PointerMotionMask;
-    /* Top left corner (x, y), bottom right corner (rx, ry) */
-    int x, y, rx, ry;
-
-    XRaiseWindow(W->XDisplay, C->win);
-    /* Can't move fullscreen windows */
-    if (C->fullscreen)
+    if (C)
     {
-        msg("Can't move fullscreen windows!\n");
-        return;
+        printf("Resizing client \'%s\'\n", C->name);
+        client_moveresize(W, C, conf->x, conf->y, conf->width, conf->height);
     }
-
-    msg("Moving.\n");
-    XSelectInput(W->XDisplay, C->win, mask);
-
-    while (1)
+    else
     {
-        /* Don't use XNextEvent as moving could be stopped if another window closes,
-         * for example. This could also mean such events are missed completely. */
-        XMaskEvent(W->XDisplay, mask, &ev);
-        switch (ev.type)
-        {
-            case MotionNotify:
-                x = ev.xmotion.x_root - xOff;
-                y = ev.xmotion.y_root - yOff;
-                rx = x + C->w + 2 * W->bsize;
-                ry = y + C->h + 2 * W->bsize;
-                /* Snap to borders if near edges */
-                if (ABS(x) < W->snapwidth)
-                    x = 0;
-                if (ABS(y) < W->snapwidth)
-                    y = 0;
-                if (ABS(W->rW - rx) < W->snapwidth)
-                    x = W->rW - C->w - 2*W->bsize;
-                if (ABS(W->rH - ry) < W->snapwidth)
-                    y = W->rH - C->h - 2*W->bsize;
-                XMoveWindow(W->XDisplay, C->win, x, y);
-                C->x = x;
-                C->y = y;
-                break;
-            case Expose: /* Redraw background during window moves */
-                expose_event(W, &ev);
-                break;
-            case ButtonRelease:
-            default:
-                msg("done moving. Last event was %s\n", event_name(ev.type));
-                /* Select the normal events again */
-                client_select_events(W, C);
-                return;
-        }
+        printf("Resizing anon.\n");
+        XMoveResizeWindow(W->XDisplay, conf->window,
+                          conf->x, conf->y, conf->width, conf->height);
     }
 }
+
 
 static void event_loop(struct WM_t *W)
 {
@@ -296,7 +244,6 @@ static void event_loop(struct WM_t *W)
     while (1)
     {
         XNextEvent(W->XDisplay, &ev);
-        printf("- %s -\n", event_name(ev.type));
         C = client_from_window(W, ev.xany.window);
 
         switch (ev.type)
@@ -306,12 +253,20 @@ static void event_loop(struct WM_t *W)
                 msg("Button pressed\n");
                 /* ALT+click to move a window */
                 if (C && (ev.xbutton.state & (Button1Mask | Mod1Mask)))
-                    move_client_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                {
+                    event_move_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                }
                 /* A normal click to focus a window */
                 else if (C && ev.xbutton.state == 0)
+                {
                     client_focus(W, C);
-                else if (C)
-                    XRaiseWindow(W->XDisplay, C->win);
+                    XSendEvent(W->XDisplay, InputFocus, 0, ButtonPressMask, &ev);
+                }
+                break;
+            case ConfigureNotify:
+                break;
+            case ConfigureRequest:
+                configure_request(W, C, &ev);
                 break;
             case MapRequest: /* Does not use CreateNotify */
                 msg("Map request\n");
@@ -334,7 +289,14 @@ static void event_loop(struct WM_t *W)
                 key_pressed(W, C, &ev);
                 break;
             case Expose:
-                expose_event(W, &ev);
+                event_expose(W, &ev);
+                break;
+            default:
+                printf("- %s -", event_name(ev.type));
+                if (C)
+                    printf(" %s -\n", C->name);
+                else
+                    printf("\n");
                 break;
         }
     }
@@ -380,6 +342,15 @@ static void init_state(struct WM_t *W)
         W->clients[i] = NULL;
 }
 
+static void load_font(struct WM_t *W)
+{
+    char **font_names;
+    int count, i;
+    font_names = XListFonts(W->XDisplay, "*fixed*", 16, &count);
+    for (i = 0; i < count; i++)
+        msg("    %s\n", font_names[i]);
+}
+
 int main(void)
 {
     struct WM_t W;
@@ -393,6 +364,7 @@ int main(void)
 
     init_state(&W);
     open_display(&W);
+    load_font(&W);
     find_open_windows(&W);
     alttab_init(&W);
     event_loop(&W);
