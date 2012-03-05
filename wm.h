@@ -44,7 +44,8 @@ struct WM_t
     int                 XScreen;
     Window              rootWindow;
     GC                  rootGC;
-    Cursor              rootCursor;
+
+    Cursor              cursor_normal, cursor_move, cursor_resize;
 
     /* Root window width and height */
     unsigned int        rW, rH;

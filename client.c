@@ -149,7 +149,10 @@ void client_focus(struct WM_t *W, struct wmclient *C)
 void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, int h)
 {
     if (C->fullscreen)
+    {
         C->fullscreen = 0;
+        set_size_pos_border(W, C);
+    }
 
     if (w > W->rW || w < 0)
         w = W->rW - 2 * W->bsize;

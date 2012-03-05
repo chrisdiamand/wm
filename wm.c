@@ -172,10 +172,10 @@ static void open_display(struct WM_t *W)
 
     XSetErrorHandler(error_handler);
 
-    /*
-    W->rootCursor = XCreateFontCursor(W->XDisplay, XC_top_left_arrow);
-    XDefineCursor(W->XDisplay, W->rootWindow, W->rootCursor);
-    */
+    W->cursor_normal = XCreateFontCursor(W->XDisplay, XC_left_ptr);
+    W->cursor_resize = XCreateFontCursor(W->XDisplay, XC_sizing);
+    W->cursor_move = XCreateFontCursor(W->XDisplay, XC_fleur);
+    XDefineCursor(W->XDisplay, W->rootWindow, W->cursor_normal);
 
     redraw_root(W, NULL);
 }

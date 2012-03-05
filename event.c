@@ -86,7 +86,7 @@ void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
     /* Grab the pointer to ensure the ButtonRelease event is received
      * FIXME: Change the cursor */
     XGrabPointer(W->XDisplay, W->rootWindow, 0, mask, GrabModeAsync,
-                 GrabModeAsync, None, None, CurrentTime);
+                 GrabModeAsync, None, W->cursor_move, CurrentTime);
 
     while (1)
     {
