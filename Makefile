@@ -1,6 +1,6 @@
 
 
-OBJ=alttab.o event.o policy.o wm.o client.o
+OBJ=alttab.o client.o event.o launcher.o policy.o wm.o
 OUT=wm
 LIBS=-lX11
 CFLAGS=-g -Wall -pedantic

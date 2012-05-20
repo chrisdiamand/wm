@@ -14,8 +14,8 @@
 static void draw_item_text(struct WM_t *W, char *text, int topcorner)
 {
     struct alttab_t *A = &(W->AT);
-    int text_w = XTextWidth(A->font, text, strlen(text));
-    int text_h = A->font->ascent + A->font->descent;
+    int text_w = XTextWidth(W->font, text, strlen(text));
+    int text_h = W->font->ascent + W->font->descent;
     int x, y;
 
     if (text_w < A->w) /* Centre it if it will fit */
@@ -23,7 +23,7 @@ static void draw_item_text(struct WM_t *W, char *text, int topcorner)
     else
         x = AT_BORDER + 4; /* 4 is an arbitrary gap before the start of the text */
 
-    y = topcorner + (A->item_height + text_h) / 2 - A->font->descent - 1;
+    y = topcorner + (A->item_height + text_h) / 2 - W->font->descent - 1;
     XDrawString(W->XDisplay, A->win, A->gc, x, y, text, strlen(text));
 
 }
@@ -59,7 +59,7 @@ static void draw_alttab(struct WM_t *W)
 static int alttab_key_event(struct WM_t *W, XEvent *ev)
 {
     struct alttab_t *A = &(W->AT);
-    KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
+    KeySym sym = XLookupKeysym(&(ev->xkey), 0);
 
     /* Alt released so focus the selected window and quit the switcher */
     if (!(ev->xkey.state & Mod1Mask) ||
@@ -125,10 +125,10 @@ static void alttab_show(struct WM_t *W)
     XCharStruct max_char;
     struct alttab_t *A = &(W->AT);
 
-    assert(A->font);
+    assert(W->font);
 
     /* Calculate the window size */
-    max_char = A->font->max_bounds;
+    max_char = W->font->max_bounds;
     A->item_height = (max_char.ascent + max_char.descent) * 1.5;
     A->h = A->item_height * W->nclients + 2 * AT_BORDER;
     A->w = (max_char.rbearing - max_char.lbearing) * ALT_TAB_CHARACTERS + 2 * AT_BORDER;
@@ -179,14 +179,7 @@ void alttab_init(struct WM_t *W)
     /* Get events */
     XSelectInput(W->XDisplay, A->win, A->inputeventmask);
 
-    A->font = XLoadQueryFont(W->XDisplay, ALT_TAB_FONTNAME);
-    if (!A->font)
-    {
-        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", ALT_TAB_FONTNAME);
-        A->font = XLoadQueryFont(W->XDisplay, "fixed");
-    }
-
     A->gc = XCreateGC(W->XDisplay, A->win, 0, NULL);
-    XSetFont(W->XDisplay, A->gc, A->font->fid);
+    XSetFont(W->XDisplay, A->gc, W->font->fid);
 }
 

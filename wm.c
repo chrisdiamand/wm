@@ -185,7 +185,7 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
     /* Border size */
     int B = W->bsize;
-    KeySym sym = XKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0);
+    KeySym sym = XLookupKeysym(&(ev->xkey), 0);
     if (sym == XK_Tab && (ev->xkey.state & Mod1Mask))
         alttab(W);
     
@@ -196,7 +196,7 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
             case XK_f:
                 client_togglefullscreen(W, C);
                 break;
-            /* Tiling. -1 is for maximising in that dimension */
+            /* Tiling. Passing -1 to moveresize is for maximising in that dimension */
             case XK_Up:
                 client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
                 break;
@@ -210,7 +210,7 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
                 client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
                 break;
             case XK_Return:
-                system("dmenu_run &");
+                launcher(W);
                 break;
         }
     }
@@ -349,6 +349,14 @@ static void load_font(struct WM_t *W)
     font_names = XListFonts(W->XDisplay, "*fixed*", 16, &count);
     for (i = 0; i < count; i++)
         msg("    %s\n", font_names[i]);
+
+    W->font = XLoadQueryFont(W->XDisplay, WM_FONTNAME);
+    if (!W->font)
+    {
+        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", WM_FONTNAME);
+        W->font = XLoadQueryFont(W->XDisplay, "fixed");
+        assert(W->font);
+    }
 }
 
 int main(void)
@@ -367,6 +375,7 @@ int main(void)
     load_font(&W);
     find_open_windows(&W);
     alttab_init(&W);
+    launcher_init(&W);
     event_loop(&W);
 
     return 0;

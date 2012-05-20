@@ -8,13 +8,15 @@
 #define MAX_CLIENTS 64
 
 #define ALT_TAB_CHARACTERS 42
-#define ALT_TAB_FONTNAME "*-courier-*"
-#define ALT_TAB_FONTNAME__ "-*-helvetica-*-22-*"
+#define WM_FONTNAME "*-courier*standard*-14-*"
+#define WM_FONTNAME__ "-*-helvetica-*-22-*"
 
 #define HELVETICA_11 "*helvetica*11*"
 #define HELVETICA_12 "*helvetica*12*"
 #define COURIER_11 "*courier*11*"
 #define COURIER_12 "*courier*12*"
+
+#define LAUNCHER_MAX_STRLEN 128
 
 struct alttab_t
 {
@@ -23,9 +25,19 @@ struct alttab_t
     int                 item_height;
     GC                  gc;
     unsigned long       inputeventmask;
-    XFontStruct         *font;
     /* Index of currently selected window */
     int                 selected;
+};
+
+struct launcher_t
+{
+    Window              win;
+    int                 height;
+    GC                  gc;
+    unsigned long       inputeventmask;
+
+    int                 len;
+    char                str[LAUNCHER_MAX_STRLEN];
 };
 
 struct wmclient
@@ -61,6 +73,8 @@ struct WM_t
 
     /* Info about the Alt-Tab switcher window */
     struct alttab_t     AT;
+    struct launcher_t   launcher;
+    XFontStruct         *font;
 
     unsigned long       black, lightgrey, white, focus_border_colour;
 };
@@ -81,6 +95,10 @@ void client_remove(struct WM_t *, struct wmclient *);
 /* Functions from alttab.c */
 void alttab(struct WM_t *);
 void alttab_init(struct WM_t *);
+
+/* launcher.c */
+void launcher(struct WM_t *);
+void launcher_init(struct WM_t *);
 
 /* Functions from event.c */
 char *event_name(int);
