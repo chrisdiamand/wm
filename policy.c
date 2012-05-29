@@ -9,65 +9,52 @@
 #include "policy.h"
 #include "wm.h"
 
-void decide_new_window_size_pos(struct WM_t *W, Window xwinid, int *x, int *y, int *w, int *h)
+void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
 {
     XWindowAttributes attr;
     XSizeHints hints;
     long user_hints;
 
     /* Get actual position/size of window */
-    XGetWindowAttributes(W->XDisplay, xwinid, &attr);
+    XGetWindowAttributes(W->XDisplay, C->win, &attr);
 
-    *w = attr.width;
-    *h = attr.height;
+    C->min_w = C->min_h = 30;
+
+    C->x = attr.x;
+    C->y = attr.y;
+    C->w = attr.width;
+    C->h = attr.height;
+    printf("New window: Size %dx%d\n", C->w, C->h);
 
     /* Get size hints */
-    if (XGetWMNormalHints(W->XDisplay, xwinid, &hints, &user_hints))
+    if (XGetWMNormalHints(W->XDisplay, C->win, &hints, &user_hints))
     {
-        printf("Hints: flags = %ld\n", hints.flags);
-        printf("      w = %d,     h = %d\n", hints.width, hints.height);
-        printf("  min_w = %d, min_h = %d\n", hints.min_width, hints.min_height);
-        printf("  max_w = %d, max_h = %d\n", hints.max_width, hints.max_height);
-        
-        /* Check if a hint size has been provided */
-        if ((hints.flags & PSize) || (hints.flags & USSize))
+        if (hints.flags & PMinSize)
         {
-            printf("Using hints\n");
-            *w = hints.width;
-            *h = hints.height;
-        }
-        else if (hints.flags & PMinSize)
-        {
-            if (attr.width < hints.min_width)
-                *w = hints.min_width;
-            if (attr.height < hints.min_height)
-                *h = hints.min_height;
-        }
-
-        /* Check if there is a hint position */
-        if ((hints.flags & PPosition) || (hints.flags & USPosition))
-        {
-            *x = hints.x;
-            *y = hints.y;
-        }
-        else
-        {
-            *x = attr.x;
-            *y = attr.y;
+            if (C->min_w < hints.min_width)
+                C->min_w = hints.min_width;
+            if (C->min_h < hints.min_height)
+                C->min_h = hints.min_height;
         }
     }
+
+    /* The minimum size could be larger than the screen? */
+    if (C->w < C->min_w)
+        C->w = C->min_w;
+    if (C->h < C->min_h)
+        C->h = C->min_h;
 
     /* Don't let windows be larger than the root window */
-    if (*w > W->rW)
+    if (C->w > W->rW)
     {
-        *w = W->rW - 2 * W->bsize;
-        *x = 0;
+        C->w = W->rW - 2 * W->bsize;
+        C->x = 0;
     }
 
-    if (*h > W->rH)
+    if (C->h > W->rH)
     {
-        *h = W->rH - 2 * W->bsize;
-        *y = 0;
+        C->h = W->rH - 2 * W->bsize;
+        C->y = 0;
     }
 
 }

@@ -43,8 +43,10 @@ struct launcher_t
 struct wmclient
 {
     char                *name;
+    int                 pid;
     Window              win;
     int                 x, y, w, h;
+    int                 min_w, min_h;
     int                 fullscreen;
 };
 
@@ -104,6 +106,7 @@ void launcher_init(struct WM_t *);
 char *event_name(int);
 void event_expose(struct WM_t *, XEvent *);
 void event_move_window(struct WM_t *, struct wmclient *, int, int);
+void event_resize_window(struct WM_t *, struct wmclient *, int, int);
 
 /* Debugging function */
 int msg(char *, ...);

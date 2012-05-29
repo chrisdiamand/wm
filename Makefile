@@ -2,8 +2,8 @@
 
 OBJ=alttab.o client.o event.o launcher.o policy.o wm.o
 OUT=wm
-LIBS=-lX11
-CFLAGS=-g -Wall -pedantic
+LIBS=`pkg-config --libs xproto` -lX11
+CFLAGS=`pkg-config --cflags xproto` -g -Wall -pedantic
 
 all: $(OUT)
 

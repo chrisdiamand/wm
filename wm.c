@@ -216,7 +216,7 @@ static void key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
     }
 }
 
-static  void configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
+static void configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
     XConfigureRequestEvent *conf = &(ev->xconfigurerequest);
     printf("ConfigureRequest: border = %d\n", conf->border_width);
@@ -237,10 +237,31 @@ static  void configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
 }
 
 
+#define NETWM_MAX_STATE "_NET_WM_STATE_MAXIMISED"
+static void client_message(struct WM_t *W, struct wmclient *C, XEvent *ev)
+{
+    char *name;
+    XClientMessageEvent cm = ev->xclient;
+    name = XGetAtomName(W->XDisplay, cm.message_type);
+    if (strcmp(name, "_NET_WM_STATE") == 0)
+    {
+        char *a = XGetAtomName(W->XDisplay, cm.data.l[1]);
+        msg("Maximise \'%s\'\n", C->name);
+        if (strncmp(a, NETWM_MAX_STATE, sizeof(NETWM_MAX_STATE)))
+            client_togglefullscreen(W, C);
+    }
+    /*
+    msg("Atom name %s. Format %d\n", XGetAtomName(W->XDisplay, cm.message_type), cm.format);
+    for (i = 0; i < 5; i++)
+        msg("%d : %s\n", i, XGetAtomName(W->XDisplay, cm.data.l[i]));
+        */
+}
+
 static void event_loop(struct WM_t *W)
 {
     XEvent ev;
     struct wmclient *C = NULL;
+    unsigned int state;
     while (1)
     {
         XNextEvent(W->XDisplay, &ev);
@@ -250,17 +271,21 @@ static void event_loop(struct WM_t *W)
         {
             /* Mouse button */
             case ButtonPress:
-                msg("Button pressed\n");
-                /* ALT+click to move a window */
-                if (C && (ev.xbutton.state & (Button1Mask | Mod1Mask)))
+                state = ev.xbutton.state;
+                /* Alt+click to move a window, resize if shift held as well */
+                /* Shift+alt+click to resize a window */
+                if (C && (state & (Button1Mask | Mod1Mask)))
                 {
-                    event_move_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                    if (state & ShiftMask)
+                        event_resize_window(W, C, ev.xbutton.x_root, ev.xbutton.y_root);
+                    else
+                        event_move_window(W, C, ev.xbutton.x, ev.xbutton.y);
                 }
                 /* A normal click to focus a window */
-                else if (C && ev.xbutton.state == 0)
+                else if (C && state == 0)
                 {
                     client_focus(W, C);
-                    XSendEvent(W->XDisplay, InputFocus, 0, ButtonPressMask, &ev);
+                    XSendEvent(W->XDisplay, C->win, 0, ButtonPressMask, &ev);
                 }
                 break;
             case ConfigureNotify:
@@ -291,12 +316,18 @@ static void event_loop(struct WM_t *W)
             case Expose:
                 event_expose(W, &ev);
                 break;
-            default:
-                printf("- %s -", event_name(ev.type));
+            case ClientMessage:
                 if (C)
-                    printf(" %s -\n", C->name);
+                    client_message(W, C, &ev);
                 else
-                    printf("\n");
+                    msg("Client message from unknown client!\n");
+                break;
+            default:
+                msg("- %s -", event_name(ev.type));
+                if (C)
+                    msg(" %s -\n", C->name);
+                else
+                    msg("\n");
                 break;
         }
     }

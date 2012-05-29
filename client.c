@@ -21,19 +21,31 @@ static void print_clients(struct WM_t *W)
 static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
 {
     XConfigureEvent e;
+
     e.type = ConfigureNotify;
     e.display = W->XDisplay;
     e.event = C->win;
     e.window = C->win;
-    e.x = C->x;
-    e.y = C->y;
-    e.width = C->w;
-    e.height = C->h;
-    e.border_width = W->bsize;
     e.above = None;
     e.override_redirect = 0;
+
+    if (!C->fullscreen)
+    {
+        e.x = C->x;
+        e.y = C->y;
+        e.width = C->w;
+        e.height = C->h;
+        e.border_width = W->bsize;
+    }
+    else
+    {
+        e.x = 0;
+        e.y = 0;
+        e.width = W->rW;
+        e.height = W->rH;
+        e.border_width = 0;
+    }
     XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
-    msg("configurenotify sent\n");
 }
 
 /* Move all clients with focus position between start end down the list,
@@ -61,6 +73,10 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
 
     /* Grab ALT+click events for moving windows */
     XGrabButton(W->XDisplay, Button1, Mod1Mask, C->win, 0,
+                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
+                GrabModeAsync, GrabModeSync, None, None);
+    /* Grab Shift+alt+click events for moving windows */
+    XGrabButton(W->XDisplay, Button1, Mod1Mask | ShiftMask, C->win, 0,
                 ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
     /* Grab for any click so if it is clicked on it can be refocused */
@@ -93,22 +109,20 @@ static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
 {
     /* Add a border */
     XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
-    msg("Border added\n");
-    /* Set the colour */
 
+    /* Set the colour differently if it's at the top of the focus stack */
     if (W->clients[0] == C)
         set_border_colour(W, C, 1);
     else
         set_border_colour(W, C, 0);
 
     XMoveResizeWindow(W->XDisplay, C->win, C->x, C->y, C->w, C->h);
-    msg("Resized and moved\n");
 }
 
 static int get_client_index(struct WM_t *W, Window id)
 {
     int i;
-    for (i = 0; i < MAX_CLIENTS; i++)
+    for (i = 0; i < W->nclients; i++)
     {
         struct wmclient *C = W->clients[i];
         /* Don't test null entries */
@@ -123,9 +137,15 @@ static int get_client_index(struct WM_t *W, Window id)
 
 void client_focus(struct WM_t *W, struct wmclient *C)
 {
-    int oldidx = get_client_index(W, C->win);
-    struct wmclient *old = W->clients[0];
-    printf("Focus %s!\n", C->name);
+    int oldidx;
+    struct wmclient *old;
+
+    /* Don't do anything if there's nothing to focus */
+    if (W->nclients == 0)
+        return;
+
+    oldidx = get_client_index(W, C->win);
+    old = W->clients[0];
 
     move_down_client_list(W, 0, oldidx);
     W->clients[0] = C;
@@ -141,8 +161,6 @@ void client_focus(struct WM_t *W, struct wmclient *C)
     XRaiseWindow(W->XDisplay, C->win);
     XSetInputFocus(W->XDisplay, C->win, RevertToPointerRoot, CurrentTime);
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
-
-    print_clients(W);
 }
 
 /* Move and resize a window, saving the new dimensions. Negative sizes mean maximise */
@@ -169,17 +187,21 @@ void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, 
 
 static void maximise(struct WM_t *W, struct wmclient *C)
 {
-    msg("MAX: %s\n", C->name);
+    msg("client_MAX: %s\n", C->name);
     C->fullscreen = 1;
     XSetWindowBorderWidth(W->XDisplay, C->win, 0);
     XMoveResizeWindow(W->XDisplay, C->win, 0, 0, W->rW, W->rH);
+
+    send_ConfigureNotify(W, C);
 }
 
 static void unmaximise(struct WM_t *W, struct wmclient *C)
 {
-    msg("MIN: %s\n", C->name);
+    msg("client_unMAX: %s\n", C->name);
     C->fullscreen = 0;
     set_size_pos_border(W, C);
+
+    send_ConfigureNotify(W, C);
 }
 
 void client_togglefullscreen(struct WM_t *W, struct wmclient *C)
@@ -190,34 +212,56 @@ void client_togglefullscreen(struct WM_t *W, struct wmclient *C)
         unmaximise(W, C);
 }
 
+static void get_pid(struct WM_t *W, struct wmclient *C)
+{
+    Atom NetWM_PID = XInternAtom(W->XDisplay, "_NET_WM_PID", 0);
+    Atom actual_type_return;
+    int actual_format_return;
+    unsigned long nitems_return, bytes_after_return;
+    unsigned char *prop_return;
+
+    if (NetWM_PID == None)
+    {
+        msg("get_pid(): Couldn't get _NET_WM_PID atom\n");
+        C->pid = 0;
+        return;
+    }
+    XGetWindowProperty(W->XDisplay, C->win, NetWM_PID, /* Get the _NET_WM_PID property */
+                       0,               /* Data offset 0 */
+                       1,               /* Length 1x32 bits */
+                       0,               /* Don't delete it afterwards */
+                       AnyPropertyType, /* Atom reg_type, whatever that is */
+                       &actual_type_return, &actual_format_return,
+                       &nitems_return, &bytes_after_return,
+                       &prop_return);   /* The actual data */
+
+    C->pid = *( (int *) prop_return );
+}
+
 /* Register a client, steal its border, grap events, etc */
 void client_register(struct WM_t *W, Window xwindow_id)
 {
-    char *name;
     struct wmclient *C = malloc(sizeof(*C));
 
-    XFetchName(W->XDisplay, xwindow_id, &name);
-    if (!name)
-        name = "<notitle>";
-    msg("Registering \'%s\':\n", name);
+    XFetchName(W->XDisplay, xwindow_id, &(C->name));
+    if (!(C->name))
+        C->name = "<notitle>";
+    msg("Registering \'%s\':\n", C->name);
 
-    /* Duplicate the string in case the window closes but the string is still required */
-    C->name = strdup(name);
-    printf("name = %p, from x = %p\n", C->name, name);
     C->win = xwindow_id;
 
-    decide_new_window_size_pos(W, C->win, &(C->x), &(C->y), &(C->w), &(C->h));
+    decide_new_window_size_pos(W, C);
 
     C->fullscreen = 0;
 
     set_size_pos_border(W, C);
 
     client_select_events(W, C);
-    msg("Buttons grabbed\n");
 
     send_ConfigureNotify(W, C);
     XMapWindow(W->XDisplay, C->win);
-    msg("Mapped\n");
+
+    get_pid(W, C);
 
     W->clients[W->nclients++] = C;
 
@@ -241,8 +285,13 @@ void client_remove(struct WM_t *W, struct wmclient *C)
 {
     int idx = get_client_index(W, C->win), i;
 
-    assert(W->clients[idx] == C);
+    if (W->clients[idx] != C)
+    {
+        msg("client_remove: somehow get_client_index failed! :o\n");
+        return;
+    }
 
+    W->clients[idx] = NULL;
     /* Update all the focus numbers, i.e. decrease (bring forward) all the windows
        with bigger focus numbers. */
     for (i = idx; i < W->nclients; i++)
@@ -253,8 +302,11 @@ void client_remove(struct WM_t *W, struct wmclient *C)
     free(C->name);
     free(C);
 
+    msg("About to print\n");
     print_clients(W);
+    msg("Printed, about to focus\n");
 
     client_focus(W, W->clients[0]);
+    msg("Focused\n");
 }
 

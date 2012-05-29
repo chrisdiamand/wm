@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -25,9 +26,12 @@ static void draw_launcher(struct WM_t *W)
     /* Draw a grey background */
     XSetForeground(W->XDisplay, L->gc, W->lightgrey);
     XFillRectangle(W->XDisplay, L->win, L->gc, 0, 0, W->rW, L->height);
-    XSetForeground(W->XDisplay, L->gc, W->white);
-    XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - W->font->ascent, 2, text_h);
+    /* Draw the cursor */
     XSetForeground(W->XDisplay, L->gc, W->black);
+    XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - W->font->ascent, 2, text_h);
+    /*
+    XSetForeground(W->XDisplay, L->gc, W->black);
+    */
 
     XDrawString(W->XDisplay, L->win, L->gc, 10, y, L->str, L->len);
 }
@@ -35,6 +39,11 @@ static void draw_launcher(struct WM_t *W)
 static void run(char *cmd)
 {
     char exec[LAUNCHER_MAX_STRLEN + 3];
+    if (strcmp(cmd, "logout") == 0)
+    {
+        msg("\"logout\" typed, exiting.\n");
+        exit(0);
+    }
     snprintf(exec, sizeof(exec), "%s &", cmd);
     system(exec);
 }
