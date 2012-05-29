@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 
+#include "launcher.h"
 #include "wm.h"
 
 static int keysym_to_ascii(struct WM_t *W, KeySym sym)
@@ -20,15 +22,15 @@ static int keysym_to_ascii(struct WM_t *W, KeySym sym)
 static void draw_launcher(struct WM_t *W)
 {
     struct launcher_t *L = &(W->launcher);
-    int text_h = W->font->ascent + W->font->descent;
-    int y = 2 * L->height / 3 + 1, cursorpos = 10 + XTextWidth(W->font, L->str, L->len);
+    int text_h = L->font->ascent + L->font->descent;
+    int y = 2 * L->height / 3 + 1, cursorpos = 10 + XTextWidth(L->font, L->str, L->len);
 
     /* Draw a grey background */
     XSetForeground(W->XDisplay, L->gc, W->lightgrey);
     XFillRectangle(W->XDisplay, L->win, L->gc, 0, 0, W->rW, L->height);
     /* Draw the cursor */
     XSetForeground(W->XDisplay, L->gc, W->black);
-    XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - W->font->ascent, 2, text_h);
+    XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - L->font->ascent, 2, text_h);
     /*
     XSetForeground(W->XDisplay, L->gc, W->black);
     */
@@ -133,7 +135,17 @@ void launcher_init(struct WM_t *W)
     XSelectInput(W->XDisplay, L->win, L->inputeventmask);
 
     L->gc = XCreateGC(W->XDisplay, L->win, 0, NULL);
-    XSetFont(W->XDisplay, L->gc, W->font->fid);
+
+    /* Load the font */
+    L->font = XLoadQueryFont(W->XDisplay, W->prefs.launcher_font);
+    if (!L->font)
+    {
+        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.alttab_font);
+        L->font = XLoadQueryFont(W->XDisplay, "fixed");
+        assert(L->font);
+    }
+
+    XSetFont(W->XDisplay, L->gc, L->font->fid);
 
     L->str[0] = '\0';
     L->len = 0;

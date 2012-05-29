@@ -47,13 +47,13 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
     /* Don't let windows be larger than the root window */
     if (C->w > W->rW)
     {
-        C->w = W->rW - 2 * W->bsize;
+        C->w = W->rW - 2 * W->prefs.bw;
         C->x = 0;
     }
 
     if (C->h > W->rH)
     {
-        C->h = W->rH - 2 * W->bsize;
+        C->h = W->rH - 2 * W->prefs.bw;
         C->y = 0;
     }
 

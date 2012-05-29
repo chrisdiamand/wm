@@ -5,6 +5,8 @@
 #include <X11/X.h>
 #include <X11/Xutil.h>
 
+#include "alttab.h"
+#include "launcher.h"
 #include "wm.h"
 
 static int ABS(int n)
@@ -65,27 +67,27 @@ static void event_expose(struct WM_t *W, XEvent *ev)
 static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
 {
     /* Work out the bottom right corner position */
-    int rx = C->x + C->w + 2 * W->bsize;
-    int ry = C->y + C->h + 2 * W->bsize;
+    int rx = C->x + C->w + 2 * W->prefs.bw;
+    int ry = C->y + C->h + 2 * W->prefs.bw;
     /* Snap to borders if near edges */
-    if (ABS(C->x) < W->snapwidth)
+    if (ABS(C->x) < W->prefs.snapwidth)
         C->x = 0;
-    if (ABS(C->y) < W->snapwidth)
+    if (ABS(C->y) < W->prefs.snapwidth)
         C->y = 0;
     /* Right border */
-    if (ABS(W->rW - rx) < W->snapwidth)
+    if (ABS(W->rW - rx) < W->prefs.snapwidth)
     {
         if (resize)
-            C->w = W->rW - (C->x + 2*W->bsize);
+            C->w = W->rW - (C->x + 2*W->prefs.bw);
         else
-            C->x = W->rW - (C->w + 2*W->bsize);
+            C->x = W->rW - (C->w + 2*W->prefs.bw);
     }
-    if (ABS(W->rH - ry) < W->snapwidth)
+    if (ABS(W->rH - ry) < W->prefs.snapwidth)
     {
         if (resize)
-            C->h = W->rH - (C->y + 2*W->bsize);
+            C->h = W->rH - (C->y + 2*W->prefs.bw);
         else
-            C->y = W->rH - (C->h + 2*W->bsize);
+            C->y = W->rH - (C->h + 2*W->prefs.bw);
     }
 
     if (C->w < C->min_w)
@@ -110,8 +112,8 @@ static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int 
     {
         C->x = 0;
         C->y = 0;
-        C->w = W->rW - 2 * W->bsize;
-        C->h = W->rH - 2 * W->bsize;
+        C->w = W->rW - 2 * W->prefs.bw;
+        C->h = W->rH - 2 * W->prefs.bw;
         client_togglefullscreen(W, C);
     }
 
@@ -161,8 +163,8 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
         msg("Resizing fullscreen window!\n");
         C->x = 0;
         C->y = 0;
-        startW = C->w = W->rW - 2 * W->bsize;
-        startH = C->h = W->rH - 2 * W->bsize;
+        startW = C->w = W->rW - 2 * W->prefs.bw;
+        startH = C->h = W->rH - 2 * W->prefs.bw;
         client_togglefullscreen(W, C);
     }
     /* Grab the pointer to ensure the ButtonRelease event is received
@@ -203,7 +205,7 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
 static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
     /* Border size */
-    int B = W->bsize;
+    int B = W->prefs.bw;
     KeySym sym = XLookupKeysym(&(ev->xkey), 0);
     if (sym == XK_Tab && (ev->xkey.state & Mod1Mask))
         alttab(W);

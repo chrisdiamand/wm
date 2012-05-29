@@ -10,8 +10,11 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#include "alttab.h"
+#include "launcher.h"
 #include "policy.h"
 #include "wm.h"
+#include "wmprefs.h"
 
 struct WM_t *wm_state_for_quit = NULL;
 FILE *log_file = NULL;
@@ -215,28 +218,9 @@ void tidy_up(void)
 static void init_state(struct WM_t *W)
 {
     int i;
-    W->bsize = 1;
-    W->snapwidth = 15;
     W->nclients = 0;
     for (i = 0; i < MAX_CLIENTS; i++)
         W->clients[i] = NULL;
-}
-
-static void load_font(struct WM_t *W)
-{
-    char **font_names;
-    int count, i;
-    font_names = XListFonts(W->XDisplay, "*fixed*", 16, &count);
-    for (i = 0; i < count; i++)
-        msg("    %s\n", font_names[i]);
-
-    W->font = XLoadQueryFont(W->XDisplay, WM_FONTNAME);
-    if (!W->font)
-    {
-        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", WM_FONTNAME);
-        W->font = XLoadQueryFont(W->XDisplay, "fixed");
-        assert(W->font);
-    }
 }
 
 int main(void)
@@ -250,12 +234,23 @@ int main(void)
     wm_state_for_quit = &W;
     atexit(tidy_up);
 
+    /* Allocate the state structure */
     init_state(&W);
+    /* Make up values for the default settings */
+    wmprefs_load_defaults(&(W.prefs));
+    /* Read the config file */
+    wmprefs_read_config_files(&(W.prefs));
+    /* Open connection to X server */
     open_display(&W);
-    load_font(&W);
+    /* See if anything is already open (e.g. a typing .xinitrc) */
     find_open_windows(&W);
+    /* Allocate the alt-tab window */
     alttab_init(&W);
+    printf("Alt tab done.\n");
+    /* And a launcher window */
     launcher_init(&W);
+    /* Go! */
+    msg("GOing to event loop.\n");
     event_loop(&W);
 
     return 0;

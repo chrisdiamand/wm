@@ -35,7 +35,7 @@ static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
         e.y = C->y;
         e.width = C->w;
         e.height = C->h;
-        e.border_width = W->bsize;
+        e.border_width = W->prefs.bw;
     }
     else
     {
@@ -108,7 +108,7 @@ static void set_border_colour(struct WM_t *W, struct wmclient *C, int focus)
 static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
 {
     /* Add a border */
-    XSetWindowBorderWidth(W->XDisplay, C->win, W->bsize);
+    XSetWindowBorderWidth(W->XDisplay, C->win, W->prefs.bw);
 
     /* Set the colour differently if it's at the top of the focus stack */
     if (W->clients[0] == C)
@@ -175,9 +175,9 @@ void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, 
     }
 
     if (w > W->rW || w < 0)
-        w = W->rW - 2 * W->bsize;
+        w = W->rW - 2 * W->prefs.bw;
     if (h > W->rH || h < 0)
-        h = W->rH - 2 * W->bsize;
+        h = W->rH - 2 * W->prefs.bw;
 
     C->x = x;
     C->y = y;
