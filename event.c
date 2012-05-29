@@ -1,4 +1,7 @@
 
+#include <stdio.h>
+#include <string.h>
+
 #include <X11/X.h>
 #include <X11/Xutil.h>
 
@@ -53,7 +56,7 @@ char *event_name(int type)
     return "Switch didn't work???";
 }
 
-void event_expose(struct WM_t *W, XEvent *ev)
+static void event_expose(struct WM_t *W, XEvent *ev)
 {
     if (ev->xexpose.window == W->rootWindow)
         redraw_root(W, ev);
@@ -95,7 +98,7 @@ static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
 
 /* Move a window. It has been clicked at coordinates (xOff, yOff) relative to
  * the top-left corner of the client. */
-void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
+static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
 {
     XEvent ev;
     long mask = ButtonReleaseMask   |
@@ -145,7 +148,7 @@ void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int yOff)
     }
 }
 
-void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, int init_y)
+static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, int init_y)
 {
     XEvent ev;
     long mask = ButtonReleaseMask   |
@@ -196,3 +199,155 @@ void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, int ini
     }
 }
 
+/* XK_Super_L is win key */
+static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
+{
+    /* Border size */
+    int B = W->bsize;
+    KeySym sym = XLookupKeysym(&(ev->xkey), 0);
+    if (sym == XK_Tab && (ev->xkey.state & Mod1Mask))
+        alttab(W);
+    
+    if (ev->xkey.state & (Mod1Mask | ShiftMask))
+    {
+        switch (sym)
+        {
+            case XK_f:
+                client_togglefullscreen(W, C);
+                break;
+            /* Tiling. Passing -1 to moveresize is for maximising in that dimension */
+            case XK_Up:
+                client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
+                break;
+            case XK_Down:
+                client_moveresize(W, C, 0, W->rH / 2 - B, -1, W->rH / 2 - B);
+                break;
+            case XK_Left:
+                client_moveresize(W, C, 0, 0, W->rW / 2 - 2 * B, -1);
+                break;
+            case XK_Right:
+                client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
+                break;
+            case XK_Return:
+                launcher(W);
+                break;
+        }
+    }
+}
+
+static void event_configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
+{
+    XConfigureRequestEvent *conf = &(ev->xconfigurerequest);
+    printf("ConfigureRequest: border = %d\n", conf->border_width);
+    printf("    x, y = %d, %d\n", conf->x, conf->y);
+    printf("    w, h = %d, %d\n", conf->width, conf->height);
+
+    if (C)
+    {
+        printf("Resizing client \'%s\'\n", C->name);
+        client_moveresize(W, C, conf->x, conf->y, conf->width, conf->height);
+    }
+    else
+    {
+        printf("Resizing anon.\n");
+        XMoveResizeWindow(W->XDisplay, conf->window,
+                          conf->x, conf->y, conf->width, conf->height);
+    }
+}
+
+
+#define NETWM_MAX_STATE "_NET_WM_STATE_MAXIMISED"
+static void client_message(struct WM_t *W, struct wmclient *C, XEvent *ev)
+{
+    char *name;
+    XClientMessageEvent cm = ev->xclient;
+    name = XGetAtomName(W->XDisplay, cm.message_type);
+    if (strcmp(name, "_NET_WM_STATE") == 0)
+    {
+        char *a = XGetAtomName(W->XDisplay, cm.data.l[1]);
+        msg("Maximise \'%s\'\n", C->name);
+        if (strncmp(a, NETWM_MAX_STATE, sizeof(NETWM_MAX_STATE)))
+            client_togglefullscreen(W, C);
+    }
+    /*
+    msg("Atom name %s. Format %d\n", XGetAtomName(W->XDisplay, cm.message_type), cm.format);
+    for (i = 0; i < 5; i++)
+        msg("%d : %s\n", i, XGetAtomName(W->XDisplay, cm.data.l[i]));
+        */
+}
+
+void event_loop(struct WM_t *W)
+{
+    XEvent ev;
+    struct wmclient *C = NULL;
+    unsigned int state;
+    while (1)
+    {
+        XNextEvent(W->XDisplay, &ev);
+        C = client_from_window(W, ev.xany.window);
+
+        switch (ev.type)
+        {
+            /* Mouse button */
+            case ButtonPress:
+                state = ev.xbutton.state;
+                /* Alt+click to move a window, resize if shift held as well */
+                /* Shift+alt+click to resize a window */
+                if (C && (state & (Button1Mask | Mod1Mask)))
+                {
+                    if (state & ShiftMask)
+                        event_resize_window(W, C, ev.xbutton.x_root, ev.xbutton.y_root);
+                    else
+                        event_move_window(W, C, ev.xbutton.x, ev.xbutton.y);
+                }
+                /* A normal click to focus a window */
+                else if (C && state == 0)
+                {
+                    client_focus(W, C);
+                    XSendEvent(W->XDisplay, C->win, 0, ButtonPressMask, &ev);
+                }
+                break;
+            case ConfigureNotify:
+                break;
+            case ConfigureRequest:
+                event_configure_request(W, C, &ev);
+                break;
+            case MapRequest: /* Does not use CreateNotify */
+                msg("Map request\n");
+                /* Don't register it again if it was just hiding for some reason
+                   or if it's the Alt-Tab switcher window */
+                if (!C && ev.xany.window != W->AT.win)
+                    client_register(W, ev.xmaprequest.window);
+                else
+                    XMapWindow(W->XDisplay, C->win);
+                break;
+            case UnmapNotify:
+                if (C)
+                    msg("%s unmapped\n", C->name);
+                break;
+            case DestroyNotify:
+                if (C)
+                    client_remove(W, C);
+                break;
+            case KeyPress:
+                event_key_pressed(W, C, &ev);
+                break;
+            case Expose:
+                event_expose(W, &ev);
+                break;
+            case ClientMessage:
+                if (C)
+                    client_message(W, C, &ev);
+                else
+                    msg("Client message from unknown client!\n");
+                break;
+            default:
+                msg("- %s -", event_name(ev.type));
+                if (C)
+                    msg(" %s -\n", C->name);
+                else
+                    msg("\n");
+                break;
+        }
+    }
+}

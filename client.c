@@ -117,6 +117,8 @@ static void set_size_pos_border(struct WM_t *W, struct wmclient *C)
         set_border_colour(W, C, 0);
 
     XMoveResizeWindow(W->XDisplay, C->win, C->x, C->y, C->w, C->h);
+    
+    /* XChangeProperty? */
 }
 
 static int get_client_index(struct WM_t *W, Window id)

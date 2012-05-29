@@ -104,9 +104,7 @@ void launcher_init(struct WM_t *);
 
 /* Functions from event.c */
 char *event_name(int);
-void event_expose(struct WM_t *, XEvent *);
-void event_move_window(struct WM_t *, struct wmclient *, int, int);
-void event_resize_window(struct WM_t *, struct wmclient *, int, int);
+void event_loop(struct WM_t *);
 
 /* Debugging function */
 int msg(char *, ...);
