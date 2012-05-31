@@ -26,14 +26,11 @@ static void draw_launcher(struct WM_t *W)
     int y = 2 * L->height / 3 + 1, cursorpos = 10 + XTextWidth(L->font, L->str, L->len);
 
     /* Draw a grey background */
-    XSetForeground(W->XDisplay, L->gc, W->lightgrey);
+    XSetForeground(W->XDisplay, L->gc, W->bg_col);
     XFillRectangle(W->XDisplay, L->win, L->gc, 0, 0, W->rW, L->height);
     /* Draw the cursor */
-    XSetForeground(W->XDisplay, L->gc, W->black);
+    XSetForeground(W->XDisplay, L->gc, W->fg_col);
     XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - L->font->ascent, 2, text_h);
-    /*
-    XSetForeground(W->XDisplay, L->gc, W->black);
-    */
 
     XDrawString(W->XDisplay, L->win, L->gc, 10, y, L->str, L->len);
 }
@@ -129,7 +126,8 @@ void launcher_init(struct WM_t *W)
     struct launcher_t *L = &(W->launcher);
     L->height = 20;
 
-    L->win = XCreateSimpleWindow(W->XDisplay, W->rootWindow, 0, 0, W->rW, L->height, 1, W->black, W->white);
+    L->win = XCreateSimpleWindow(W->XDisplay, W->rootWindow, 0, 0, W->rW, L->height,
+                                 1, W->fg_col, W->bg_col);
 
     L->inputeventmask = KeyPressMask | KeymapStateMask | ExposureMask;
     XSelectInput(W->XDisplay, L->win, L->inputeventmask);

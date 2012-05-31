@@ -115,23 +115,40 @@ static void check_existing_wm(struct WM_t *W)
     XSetErrorHandler(NULL);
 }
 
-unsigned long colour_from_rgb(struct WM_t *W, double r, double g, double b)
+/* Takes 8-bit R G and B values between 0 and 255 */
+unsigned long colour_from_rgb(struct WM_t *W, short r, short g, short b)
 {
     XColor c;
-    c.red = r * 65535.0;
-    c.green = g * 65535.0;
-    c.blue = b * 65535.0;
+    c.red = r * 257;        /* 65535 / 255 = 257 */;
+    c.green = g * 257;
+    c.blue = b * 257;
     XAllocColor(W->XDisplay, DefaultColormap(W->XDisplay, DefaultScreen(W->XDisplay)), &c);
     return c.pixel;
 }
 
 static void make_colours(struct WM_t *W)
 {
+    struct wmprefs_t *p = &(W->prefs);
+
     W->black = BlackPixel(W->XDisplay, W->XScreen);
-    W->white = WhitePixel(W->XDisplay, W->XScreen);
-    W->lightgrey = colour_from_rgb(W, 0.8, 0.8, 0.8);
-    W->focus_border_colour = colour_from_rgb(W, 0.0, 0.7, 0.0);
-}
+
+    W->focus_border_col = colour_from_rgb(W, p->focus_border_col[0],
+                                             p->focus_border_col[1],
+                                             p->focus_border_col[2]);
+
+    W->unfocus_border_col = colour_from_rgb(W, p->unfocus_border_col[0],
+                                               p->unfocus_border_col[1],
+                                               p->unfocus_border_col[2]);
+
+    W->fg_col = colour_from_rgb(W, p->fg_col[0],
+                                   p->fg_col[1],
+                                   p->fg_col[2]);
+
+    W->bg_col = colour_from_rgb(W, p->bg_col[0],
+                                   p->bg_col[1],
+                                   p->bg_col[2]);
+
+    }
 
 static void open_display(struct WM_t *W)
 {

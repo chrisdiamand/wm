@@ -7,12 +7,12 @@ struct wmprefs_t
     /* Border width. Short name because it's referenced so much */
     int         bw;
     /* Maximum distance for snapping to borders during window moves */
-    int         snapwidth;
+    int         snap_width;
 
-    int         focus_border_r, focus_border_g, focus_border_b;
-    int         launcher_bg_r, launcher_bg_g, launcher_bg_b;
+    int         focus_border_col[3], unfocus_border_col[3];
+    int         fg_col[3], bg_col[3];
     
-    char        *launcher_font, *alttab_font;
+    char        *launcher_font, *switcher_font;
     int         alttab_char_width;
 
 };

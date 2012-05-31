@@ -70,19 +70,19 @@ static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
     int rx = C->x + C->w + 2 * W->prefs.bw;
     int ry = C->y + C->h + 2 * W->prefs.bw;
     /* Snap to borders if near edges */
-    if (ABS(C->x) < W->prefs.snapwidth)
+    if (ABS(C->x) < W->prefs.snap_width)
         C->x = 0;
-    if (ABS(C->y) < W->prefs.snapwidth)
+    if (ABS(C->y) < W->prefs.snap_width)
         C->y = 0;
     /* Right border */
-    if (ABS(W->rW - rx) < W->prefs.snapwidth)
+    if (ABS(W->rW - rx) < W->prefs.snap_width)
     {
         if (resize)
             C->w = W->rW - (C->x + 2*W->prefs.bw);
         else
             C->x = W->rW - (C->w + 2*W->prefs.bw);
     }
-    if (ABS(W->rH - ry) < W->prefs.snapwidth)
+    if (ABS(W->rH - ry) < W->prefs.snap_width)
     {
         if (resize)
             C->h = W->rH - (C->y + 2*W->prefs.bw);

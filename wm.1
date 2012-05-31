@@ -1,7 +1,7 @@
 .TH wm 1
 
 .SH NAME
-wm \- a lightweight and unobtrusive X11 window manager.
+wm \- a lightweight and unobtrusive X11 window manager designed with smaller screens in mind.
 
 .SH SYNOPSIS
 .B wm
@@ -17,7 +17,7 @@ be effectively 5% bigger, for free!
 
 .SH USAGE
 Inspired by dwm(1), it uses keyboard combinations in lieu of window buttons.
-Some actions, and how you can achieve them, are listed here:
+Some actions, and the default ways of achieving them, are listed here:
 
 .TP
 .B Moving a window
@@ -34,14 +34,42 @@ edges will also 'snap' towards screen edges.
 
 .TP
 .B Launching programs
-Shift-alt-enter (or return) will show a text box at the top of the screen, into
-which commands may be typed. This will be executed with the C 'system()' function,
+Shift+alt+enter (or return) will show a text box at the top of the screen, into
+which commands may be typed. These will be executed with the C 'system()' function,
 but in the background. For example, if you type
-.B 'chromium'
+.B 'rxvt'
 then
-.B 'chromium &'
+.B 'rxvt &'
 will be executed.
 
+.TP
+.B Switching between programs/changing the focus
+.B wm
+can switch between windows using alt+tab, which brings up a box showing the titles
+of the current open windows. Pressing tab again will select the next one, and
+shift+tab will select the previous one. Releasing will focus the selected window, and
+pressing escape will cancel.
+
+.TP
+.B Fullscreening windows.
+This is really the whole point of
+.B wm.
+Pressing shift+alt+f will make the window take up the entire screen, with no border or
+decorations in sight. Pressing the same combination again will return it to its
+original size. This comes into its own with things like PDFs, or even a full screen
+xterm(1) if that's your cup of tea.
+
+.TP
+.B Tiling
+While it is not a tiling window manager, windows can be easily arranged to fit exactly
+next to each other, as long as there are only two windows, and as long as they both take up
+exactly half the screen. Pressing shift+alt+left arrow will make a window fill the entire
+left half of the screen, and shift+alt+right arrow will fill the entire right. A similar rule
+applies for up and down. More fractions will be implemented in future versions.
+
+.TP
+.B Killing programs
+This would be shift+alt+x, but it is not implemented yet.
 
 .SH CONFIGURATION
 

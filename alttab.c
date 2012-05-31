@@ -35,25 +35,27 @@ static void draw_alttab(struct WM_t *W)
     int i;
 
     /* Draw a grey background */
-    XSetForeground(W->XDisplay, A->gc, W->lightgrey);
+    XSetForeground(W->XDisplay, A->gc, W->bg_col);
     XFillRectangle(W->XDisplay, A->win, A->gc, 0, 0, A->w, A->h);
-    XSetForeground(W->XDisplay, A->gc, W->black);
+    XSetForeground(W->XDisplay, A->gc, W->fg_col);
+
+    printf("fg = %lu, bg = %lu\n", W->fg_col, W->bg_col);
 
     for (i = 0; i < W->nclients; i++)
     {
         if (i == A->selected)
         {
-            /* Black background with white text for the selected one */
-            XSetForeground(W->XDisplay, A->gc, W->black);
+            /* Swap the background and foreground colours for the selected one */
+            XSetForeground(W->XDisplay, A->gc, W->fg_col);
             XFillRectangle(W->XDisplay, A->win, A->gc,
                            AT_BORDER, A->item_height * i + AT_BORDER,
                            A->w - 2 * AT_BORDER, A->item_height);
-            XSetForeground(W->XDisplay, A->gc, W->white);
+            XSetForeground(W->XDisplay, A->gc, W->bg_col);
         }
         draw_item_text(W, W->clients[i]->name, W->AT.item_height * i + AT_BORDER);
-        /* Restore black text as the next one drawn will be unselected */
+        /* Restore fg_col text as the next one drawn will be unselected */
         if (i == A->selected)
-            XSetForeground(W->XDisplay, A->gc, W->black);
+            XSetForeground(W->XDisplay, A->gc, W->fg_col);
     }
 }
 

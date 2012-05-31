@@ -43,7 +43,9 @@ struct WM_t
     struct alttab_t     AT;
     struct launcher_t   launcher;
 
-    unsigned long       black, lightgrey, white, focus_border_colour;
+    /* Colours */
+    unsigned long       focus_border_col, unfocus_border_col;
+    unsigned long       fg_col, bg_col, black;
 
     struct wmprefs_t    prefs;
 };

@@ -99,9 +99,9 @@ void client_select_events(struct WM_t *W, struct wmclient *C)
 static void set_border_colour(struct WM_t *W, struct wmclient *C, int focus)
 {
     if (focus)
-        XSetWindowBorder(W->XDisplay, C->win, W->focus_border_colour);
+        XSetWindowBorder(W->XDisplay, C->win, W->focus_border_col);
     else
-        XSetWindowBorder(W->XDisplay, C->win, W->black);
+        XSetWindowBorder(W->XDisplay, C->win, W->unfocus_border_col);
 }
 
 /* Set a 1-pixel border and position it at the size/pos in C */
