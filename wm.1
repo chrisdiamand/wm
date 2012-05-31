@@ -1,0 +1,52 @@
+.TH wm 1
+
+.SH NAME
+wm \- a lightweight and unobtrusive X11 window manager.
+
+.SH SYNOPSIS
+.B wm
+
+.SH DESCRIPTION
+.B wm
+is designed to maximise the screen space used by applications, rather than
+use it up with pretty but useless things like window borders and panels.
+Getting rid of, for example, 25 pixels for the panel and maybe 15 for the
+title bars saves 40 pixels, or three or four lines of text. To put it another
+way, if you had a 1366x768 display, and gained 40 lines pixels, your display would
+be effectively 5% bigger, for free! 
+
+.SH USAGE
+Inspired by dwm(1), it uses keyboard combinations in lieu of window buttons.
+Some actions, and how you can achieve them, are listed here:
+
+.TP
+.B Moving a window
+Hold down alt, click and drag. This is similar to most other Linux/BSD
+window managers. If the window edges are near any screen edges they
+will 'snap' towards them. The distance at which this occurs can be configured with
+the 'snapwidth' variable.
+
+.TP
+.B Resizing a window
+Hold down shift and alt, then click and drag. This will (currently) change the
+position of the bottom right corner relative to the rest of the window. Window
+edges will also 'snap' towards screen edges.
+
+.TP
+.B Launching programs
+Shift-alt-enter (or return) will show a text box at the top of the screen, into
+which commands may be typed. This will be executed with the C 'system()' function,
+but in the background. For example, if you type
+.B 'chromium'
+then
+.B 'chromium &'
+will be executed.
+
+
+.SH CONFIGURATION
+
+.SH FILES
+~/.wmrc
+
+.SH AUTHOR
+Written by Chris Diamand.
