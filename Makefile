@@ -1,8 +1,8 @@
 
-
-OBJ=client.o event.o launcher.o policy.o rc.o switcher.o wm.o wmprefs.o
+RC_OBJ=rc/rc.o rc/scanner.o
+OBJ=client.o event.o launcher.o policy.o switcher.o wm.o wmprefs.o $(RC_OBJ)
 OUT=wm
-LIBS=`pkg-config --libs xproto` -lX11
+LDFLAGS=`pkg-config --libs xproto` -lX11
 CFLAGS=`pkg-config --cflags xproto` -g -Wall -pedantic
 PREFIX=/usr
 
@@ -10,7 +10,6 @@ PREFIX=/usr
 all: $(OUT)
 
 $(OUT): $(OBJ)
-	$(CC) -o $(OUT) $(OBJ) $(LIBS)
 
 install: $(OUT)
 	echo "This is a new make install command. prefix = $(PREFIX)"

@@ -41,6 +41,6 @@ struct rc_t *rc_init(void)
 
 void rc_parse(struct rc_t *R, char *fname)
 {
-
+    printf("Parsing %s\n", fname);
 }
 

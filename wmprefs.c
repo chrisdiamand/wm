@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "rc.h"
+#include "rc/rc.h"
 #include "wmprefs.h"
 
 /* Set the default values */
