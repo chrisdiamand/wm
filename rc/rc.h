@@ -38,7 +38,7 @@ void rc_add_colour_option(struct rc_t *, char *, int *);
 void rc_add_string_option(struct rc_t *, char *, char **);
 void rc_add_bool_option(struct rc_t *, char *, int *);
 
-void rc_parse(struct rc_t *, char *);
+void rc_read_file(struct rc_t *, char *);
 
 #endif
 

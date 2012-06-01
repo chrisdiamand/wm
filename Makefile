@@ -1,5 +1,5 @@
 
-RC_OBJ=rc/rc.o rc/scanner.o
+RC_OBJ=rc/parser.o rc/rc.o rc/scanner.o
 OBJ=client.o event.o launcher.o policy.o switcher.o wm.o wmprefs.o $(RC_OBJ)
 OUT=wm
 LDFLAGS=`pkg-config --libs xproto` -lX11

@@ -55,6 +55,6 @@ void wmprefs_read_config_files(struct wmprefs_t *p)
 {
     struct rc_t *R = rc_init();
     init_rc_options(p, R);
-    rc_parse(R, "wmrc");
+    rc_read_file(R, "wmrc");
 }
 

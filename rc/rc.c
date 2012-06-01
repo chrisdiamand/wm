@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "parser.h"
 #include "rc.h"
+#include "scanner.h"
 
 static void add_option(struct rc_t *S, char *name, pref_type type, void *ptr)
 {
@@ -39,8 +41,17 @@ struct rc_t *rc_init(void)
     return S;
 }
 
-void rc_parse(struct rc_t *R, char *fname)
+void rc_read_file(struct rc_t *R, char *fname)
 {
+    FILE *fp = fopen(fname, "r");
+    ScannerInput *I;
+    if (!fp)
+    {
+        perror(fname);
+        return;
+    }
     printf("Parsing %s\n", fname);
+    I = ScannerInputFile(fp);
+    rcp_parse(R, I);
 }
 
