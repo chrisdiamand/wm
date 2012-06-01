@@ -24,7 +24,7 @@ Some actions, and the default ways of achieving them, are listed here:
 Hold down alt, click and drag. This is similar to most other Linux/BSD
 window managers. If the window edges are near any screen edges they
 will 'snap' towards them. The distance at which this occurs can be configured with
-the 'snapwidth' variable.
+the 'snap_width' variable.
 
 .TP
 .B Resizing a window
@@ -72,9 +72,64 @@ applies for up and down. More fractions will be implemented in future versions.
 This would be shift+alt+x, but it is not implemented yet.
 
 .SH CONFIGURATION
+The configuration files are of the format
+.B parameter_name = value
+where value is an
+.B integer
+(e.g. 2932, 23), a
+.B string
+in double quotes, a
+.B boolean
+(i.e. YES or NO), or a
+.B colour
+(a comma-separated list of three integers between 0 and 255
+which are the red, green, and blue components respectively). These are the available
+options, in no particular order:
+
+.TP
+.B border_width = integer
+The width in pixels of the window borders. Set to 1 by default, and is always 0 when a window
+is fullscreened.
+
+.TP
+.B snap_width = integer
+The maximum distance at which a window will 'snap' to the sides of the screen when being
+moved or resized.
+
+.TP
+.B switcher_char_width = integer
+The number of characters visible in the alt+tab switcher.
+
+.TP
+.B focus_border_col = colour
+The colour of the border of the window which currently has the input focus.
+
+.TP
+.B unfocus_border_col = colour
+The colour of all the other windows (which aren't in focus).
+
+.TP
+.B fg_col = colour
+The colour of the text in the alt+tab switcher and command launcher windows.
+
+.TP
+.B bg_col = colour
+The colour of the background in those windows.
+
+.TP
+.B launcher_font = string
+Specifies the font to be used in the launcher window. Reverts to "fixed" if it cannot be found.
+
+.TP
+.B switcher_font = string
+The equivalent of launcher_font, but for the alt+tab switcher.
 
 .SH FILES
 ~/.wmrc
 
 .SH AUTHOR
-Written by Chris Diamand.
+Program and man page written by Chris Diamand.
+
+
+
+

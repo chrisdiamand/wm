@@ -138,7 +138,7 @@ void launcher_init(struct WM_t *W)
     L->font = XLoadQueryFont(W->XDisplay, W->prefs.launcher_font);
     if (!L->font)
     {
-        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.alttab_font);
+        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.launcher_font);
         L->font = XLoadQueryFont(W->XDisplay, "fixed");
         assert(L->font);
     }

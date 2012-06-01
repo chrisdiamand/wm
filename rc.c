@@ -39,3 +39,8 @@ struct rc_t *rc_init(void)
     return S;
 }
 
+void rc_parse(struct rc_t *R, char *fname)
+{
+
+}
+

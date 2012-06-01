@@ -7,8 +7,8 @@
 
 #define MAX_CLIENTS 64
 
-#include "alttab.h"
 #include "launcher.h"
+#include "switcher.h"
 #include "wmprefs.h"
 
 struct wmclient
@@ -40,8 +40,8 @@ struct WM_t
     int                 nclients;
 
     /* Info about the Alt-Tab switcher window */
-    struct alttab_t     AT;
     struct launcher_t   launcher;
+    struct switcher_t   AT;
 
     /* Colours */
     unsigned long       focus_border_col, unfocus_border_col;

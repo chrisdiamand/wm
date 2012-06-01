@@ -1,6 +1,6 @@
 
 
-OBJ=alttab.o client.o event.o launcher.o policy.o rc.o wm.o wmprefs.o
+OBJ=client.o event.o launcher.o policy.o rc.o switcher.o wm.o wmprefs.o
 OUT=wm
 LIBS=`pkg-config --libs xproto` -lX11
 CFLAGS=`pkg-config --cflags xproto` -g -Wall -pedantic

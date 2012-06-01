@@ -5,8 +5,8 @@
 #include <X11/X.h>
 #include <X11/Xutil.h>
 
-#include "alttab.h"
 #include "launcher.h"
+#include "switcher.h"
 #include "wm.h"
 
 static int ABS(int n)
@@ -208,7 +208,7 @@ static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
     int B = W->prefs.bw;
     KeySym sym = XLookupKeysym(&(ev->xkey), 0);
     if (sym == XK_Tab && (ev->xkey.state & Mod1Mask))
-        alttab(W);
+        switcher(W);
     
     if (ev->xkey.state & (Mod1Mask | ShiftMask))
     {

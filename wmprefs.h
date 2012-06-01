@@ -8,12 +8,13 @@ struct wmprefs_t
     int         bw;
     /* Maximum distance for snapping to borders during window moves */
     int         snap_width;
+    /* Number of characters in the alt+tab switcher window */
+    int         switcher_char_width;
 
     int         focus_border_col[3], unfocus_border_col[3];
     int         fg_col[3], bg_col[3];
     
     char        *launcher_font, *switcher_font;
-    int         alttab_char_width;
 
 };
 

@@ -7,14 +7,14 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "alttab.h"
+#include "switcher.h"
 #include "wm.h"
 
 #define AT_BORDER 5
 
 static void draw_item_text(struct WM_t *W, char *text, int topcorner)
 {
-    struct alttab_t *A = &(W->AT);
+    struct switcher_t *A = &(W->AT);
     int text_w = XTextWidth(A->font, text, strlen(text));
     int text_h = A->font->ascent + A->font->descent;
     int x, y;
@@ -29,9 +29,9 @@ static void draw_item_text(struct WM_t *W, char *text, int topcorner)
 
 }
 
-static void draw_alttab(struct WM_t *W)
+static void draw_switcher(struct WM_t *W)
 {
-    struct alttab_t *A = &(W->AT);
+    struct switcher_t *A = &(W->AT);
     int i;
 
     /* Draw a grey background */
@@ -59,9 +59,9 @@ static void draw_alttab(struct WM_t *W)
     }
 }
 
-static int alttab_key_event(struct WM_t *W, XEvent *ev)
+static int switcher_key_event(struct WM_t *W, XEvent *ev)
 {
-    struct alttab_t *A = &(W->AT);
+    struct switcher_t *A = &(W->AT);
     KeySym sym = XLookupKeysym(&(ev->xkey), 0);
 
     /* Alt released so focus the selected window and quit the switcher */
@@ -90,7 +90,7 @@ static int alttab_key_event(struct WM_t *W, XEvent *ev)
                     A->selected = W->nclients - 1;
 
                 msg("Tab: client %d\n", W->AT.selected);
-                draw_alttab(W);
+                draw_switcher(W);
             }
             break;
         /* If escape pressed don't change the focus */
@@ -101,7 +101,7 @@ static int alttab_key_event(struct WM_t *W, XEvent *ev)
     return 0;
 }
 
-static void alttab_events(struct WM_t *W)
+static void switcher_events(struct WM_t *W)
 {
     XEvent ev;
 
@@ -113,20 +113,20 @@ static void alttab_events(struct WM_t *W)
         {
             case KeyPress:
             case KeyRelease:
-                if (alttab_key_event(W, &ev) == -1)
+                if (switcher_key_event(W, &ev) == -1)
                     return;
                 break;
             case Expose:
-                draw_alttab(W);
+                draw_switcher(W);
                 break;
         }
     }
 }
 
-static void alttab_show(struct WM_t *W)
+static void switcher_show(struct WM_t *W)
 {
     XCharStruct max_char;
-    struct alttab_t *A = &(W->AT);
+    struct switcher_t *A = &(W->AT);
 
     assert(A->font);
 
@@ -134,7 +134,7 @@ static void alttab_show(struct WM_t *W)
     max_char = A->font->max_bounds;
     A->item_height = (max_char.ascent + max_char.descent) * 1.5;
     A->h = A->item_height * W->nclients + 2 * AT_BORDER;
-    A->w = (max_char.rbearing - max_char.lbearing) * W->prefs.alttab_char_width + 2 * AT_BORDER;
+    A->w = (max_char.rbearing - max_char.lbearing) * W->prefs.switcher_char_width + 2 * AT_BORDER;
 
     A->x = (W->rW - A->w - 2) / 2 - AT_BORDER;
     A->y = (W->rH - A->h - 2) / 2 - AT_BORDER;
@@ -145,28 +145,28 @@ static void alttab_show(struct WM_t *W)
     XSetInputFocus(W->XDisplay, A->win, RevertToPointerRoot, CurrentTime);
 }
 
-static void alttab_hide(struct WM_t *W)
+static void switcher_hide(struct WM_t *W)
 {
     if (W->clients[0])
         client_focus(W, W->clients[0]);
     XUnmapWindow(W->XDisplay, W->AT.win);
 }
 
-void alttab(struct WM_t *W)
+void switcher(struct WM_t *W)
 {
     if (W->nclients > 1)
         W->AT.selected = 1;
     else
         W->AT.selected = 0;
 
-    alttab_show(W);
-    alttab_events(W);
-    alttab_hide(W);
+    switcher_show(W);
+    switcher_events(W);
+    switcher_hide(W);
 }
 
-void alttab_init(struct WM_t *W)
+void switcher_init(struct WM_t *W)
 {
-    struct alttab_t *A = &(W->AT);
+    struct switcher_t *A = &(W->AT);
     /* The window will be resized every time it is shown so these are just to
      * let it be created */
     A->x = 1;   A->y = 1;   A->w = 10;   A->h = 10;
@@ -183,10 +183,10 @@ void alttab_init(struct WM_t *W)
     XSelectInput(W->XDisplay, A->win, A->inputeventmask);
 
     /* Load the font */
-    A->font = XLoadQueryFont(W->XDisplay, W->prefs.alttab_font);
+    A->font = XLoadQueryFont(W->XDisplay, W->prefs.switcher_font);
     if (!A->font)
     {
-        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.alttab_font);
+        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.switcher_font);
         A->font = XLoadQueryFont(W->XDisplay, "fixed");
         assert(A->font);
     }

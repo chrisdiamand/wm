@@ -10,9 +10,9 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "alttab.h"
 #include "launcher.h"
 #include "policy.h"
+#include "switcher.h"
 #include "wm.h"
 #include "wmprefs.h"
 
@@ -262,7 +262,7 @@ int main(void)
     /* See if anything is already open (e.g. a typing .xinitrc) */
     find_open_windows(&W);
     /* Allocate the alt-tab window */
-    alttab_init(&W);
+    switcher_init(&W);
     printf("Alt tab done.\n");
     /* And a launcher window */
     launcher_init(&W);

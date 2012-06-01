@@ -4,7 +4,7 @@
 
 struct WM_t;
 
-struct alttab_t
+struct switcher_t 
 {
     Window              win;
     int                 w, h, x, y;
@@ -17,8 +17,8 @@ struct alttab_t
     XFontStruct         *font;
 };
 
-void alttab(struct WM_t *);
-void alttab_init(struct WM_t *);
+void switcher(struct WM_t *);
+void switcher_init(struct WM_t *);
 
 #endif
 

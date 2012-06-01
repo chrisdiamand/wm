@@ -2,7 +2,7 @@
 #ifndef RC_H
 #define RC_H
 
-#define MAX_PREFS 4
+#define MAX_PREFS 16
 
 typedef enum
 {
@@ -31,10 +31,14 @@ struct rc_t
     int             nprefs;
 };
 
+struct rc_t *rc_init(void);
+
 void rc_add_int_option(struct rc_t *, char *, int *);
 void rc_add_colour_option(struct rc_t *, char *, int *);
 void rc_add_string_option(struct rc_t *, char *, char **);
 void rc_add_bool_option(struct rc_t *, char *, int *);
+
+void rc_parse(struct rc_t *, char *);
 
 #endif
 
