@@ -237,7 +237,10 @@ static void get_pid(struct WM_t *W, struct wmclient *C)
                        &nitems_return, &bytes_after_return,
                        &prop_return);   /* The actual data */
 
-    C->pid = *( (int *) prop_return );
+    if (nitems_return > 0 && prop_return)
+        C->pid = *( (int *) prop_return );
+    else /* It doesn't have a PID property */
+        C->pid = 0;
 }
 
 /* Register a client, steal its border, grap events, etc */

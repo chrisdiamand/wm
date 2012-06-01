@@ -24,9 +24,11 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
     C->y = attr.y;
     C->w = attr.width;
     C->h = attr.height;
-    printf("New window: Size %dx%d\n", C->w, C->h);
+    msg("New window: Size %dx%d\n", C->w, C->h);
 
-    /* Get size hints */
+    /* Get hints on size limits, but not the actual sizes. If a client
+     * wants a window a certain size, they will just create it that size,
+     * not put it as a 'hint'. */
     if (XGetWMNormalHints(W->XDisplay, C->win, &hints, &user_hints))
     {
         if (hints.flags & PMinSize)
@@ -56,6 +58,6 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
         C->h = W->rH - 2 * W->prefs.bw;
         C->y = 0;
     }
-
+    msg("Decided new size and pos and stuff\n");
 }
 

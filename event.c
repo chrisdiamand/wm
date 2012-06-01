@@ -117,8 +117,6 @@ static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int 
         client_togglefullscreen(W, C);
     }
 
-    msg("Moving.\n");
-
     /* Grab the pointer to ensure the ButtonRelease event is received
      * FIXME: Change the cursor */
     XGrabPointer(W->XDisplay, W->rootWindow, 0, mask, GrabModeAsync,
@@ -142,7 +140,6 @@ static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int 
                 break;
             case ButtonRelease:
             default:
-                msg("done moving. Last event was %s\n", event_name(ev.type));
                 /* Select the normal events again */
                 XUngrabPointer(W->XDisplay, CurrentTime);
                 return;
@@ -160,7 +157,6 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
 
     if (C->fullscreen)
     {
-        msg("Resizing fullscreen window!\n");
         C->x = 0;
         C->y = 0;
         startW = C->w = W->rW - 2 * W->prefs.bw;
@@ -174,7 +170,6 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
 
     /* Make the offsets be the distance from the bottom/right of the window, not top/left */
 
-    msg("Clicked at %d, %d\n", init_x, init_y);
     while (1)
     {
         /* Don't use XNextEvent as moving could be stopped if another window closes,
@@ -193,7 +188,6 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
                 break;
             case ButtonRelease:
             default:
-                msg("done resization. Last event was %s\n", event_name(ev.type));
                 /* Select the normal events again */
                 XUngrabPointer(W->XDisplay, CurrentTime);
                 return;
@@ -240,18 +234,18 @@ static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 static void event_configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
     XConfigureRequestEvent *conf = &(ev->xconfigurerequest);
-    printf("ConfigureRequest: border = %d\n", conf->border_width);
-    printf("    x, y = %d, %d\n", conf->x, conf->y);
-    printf("    w, h = %d, %d\n", conf->width, conf->height);
+    msg("ConfigureRequest: border = %d\n", conf->border_width);
+    msg("    x, y = %d, %d\n", conf->x, conf->y);
+    msg("    w, h = %d, %d\n", conf->width, conf->height);
 
     if (C)
     {
-        printf("Resizing client \'%s\'\n", C->name);
+        msg("Resizing client \'%s\'\n", C->name);
         client_moveresize(W, C, conf->x, conf->y, conf->width, conf->height);
     }
     else
     {
-        printf("Resizing anon.\n");
+        msg("Resizing anon.\n");
         XMoveResizeWindow(W->XDisplay, conf->window,
                           conf->x, conf->y, conf->width, conf->height);
     }
@@ -267,7 +261,7 @@ static void client_message(struct WM_t *W, struct wmclient *C, XEvent *ev)
     if (strcmp(name, "_NET_WM_STATE") == 0)
     {
         char *a = XGetAtomName(W->XDisplay, cm.data.l[1]);
-        msg("Maximise \'%s\'\n", C->name);
+        msg("Maximise request from \'%s\'\n", C->name);
         if (strncmp(a, NETWM_MAX_STATE, sizeof(NETWM_MAX_STATE)))
             client_togglefullscreen(W, C);
     }
@@ -315,7 +309,6 @@ void event_loop(struct WM_t *W)
                 event_configure_request(W, C, &ev);
                 break;
             case MapRequest: /* Does not use CreateNotify */
-                msg("Map request\n");
                 /* Don't register it again if it was just hiding for some reason
                    or if it's the Alt-Tab switcher window */
                 if (!C && ev.xany.window != W->AT.win)

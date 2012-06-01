@@ -219,17 +219,17 @@ void tidy_up(void)
 {
     struct WM_t *W = wm_state_for_quit;
     int i;
-    printf("Tidy up...\n");
+    msg("Tidying up.\n");
     for (i = 0; i < MAX_CLIENTS; i++)
     {
         if (W->clients[i] != NULL)
         {
             struct wmclient *c = W->clients[i];
-            msg("Freeing \'%s\'\n", c->name);
+            if (c)
+                free(c);
         }
     }
     XCloseDisplay(W->XDisplay);
-    printf("Done!\n");
 }
 
 static void init_state(struct WM_t *W)
@@ -263,11 +263,9 @@ int main(void)
     find_open_windows(&W);
     /* Allocate the alt-tab window */
     switcher_init(&W);
-    printf("Alt tab done.\n");
     /* And a launcher window */
     launcher_init(&W);
     /* Go! */
-    msg("GOing to event loop.\n");
     event_loop(&W);
 
     return 0;
