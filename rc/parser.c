@@ -46,6 +46,8 @@ static void assignment(void)
     }
     next_token();
 
+    /* Memory leaks? Nah... */
+    free(name);
 }
 
 /* List of variable assignments, i.e. "name = value" */

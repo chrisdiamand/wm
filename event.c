@@ -234,9 +234,11 @@ static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
 static void event_configure_request(struct WM_t *W, struct wmclient *C, XEvent *ev)
 {
     XConfigureRequestEvent *conf = &(ev->xconfigurerequest);
+    /*
     msg("ConfigureRequest: border = %d\n", conf->border_width);
     msg("    x, y = %d, %d\n", conf->x, conf->y);
     msg("    w, h = %d, %d\n", conf->width, conf->height);
+    */
 
     if (C)
     {

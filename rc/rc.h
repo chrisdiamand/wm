@@ -32,6 +32,7 @@ struct rc_t
 };
 
 struct rc_t *rc_init(void);
+void rc_free(struct rc_t *);
 
 void rc_add_int_option(struct rc_t *, char *, int *);
 void rc_add_colour_option(struct rc_t *, char *, int *);

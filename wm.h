@@ -45,7 +45,7 @@ struct WM_t
 
     /* Colours */
     unsigned long       focus_border_col, unfocus_border_col;
-    unsigned long       fg_col, bg_col, black;
+    unsigned long       fg_col, bg_col, black, root_bg_col;
 
     struct wmprefs_t    prefs;
 };

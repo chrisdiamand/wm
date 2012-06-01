@@ -25,6 +25,10 @@ void wmprefs_load_defaults(struct wmprefs_t *p)
     p->bg_col[1] = 215;
     p->bg_col[2] = 215;
 
+    p->root_bg_col[0] = 179;
+    p->root_bg_col[1] = 179;
+    p->root_bg_col[2] = 204;
+
     p->launcher_font = "*-courier*standard*-14-*";
 
     p->switcher_font = "*-courier*standard*-14-*";
@@ -41,6 +45,7 @@ static void init_rc_options(struct wmprefs_t *p, struct rc_t *R)
     rc_add_int_option(R, "snap_width", &(p->snap_width));
     rc_add_int_option(R, "switcher_char_width", &(p->switcher_char_width));
 
+    rc_add_colour_option(R, "root_bg_col", p->root_bg_col);
     rc_add_colour_option(R, "focus_border_col", p->focus_border_col);
     rc_add_colour_option(R, "unfocus_border_col", p->unfocus_border_col);
     rc_add_colour_option(R, "fg_col", p->fg_col);
@@ -56,5 +61,7 @@ void wmprefs_read_config_files(struct wmprefs_t *p)
     struct rc_t *R = rc_init();
     init_rc_options(p, R);
     rc_read_file(R, "wmrc");
+
+    rc_free(R);
 }
 

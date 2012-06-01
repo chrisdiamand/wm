@@ -48,13 +48,9 @@ int makeColourPixel(struct WM_t *W, double r, double g, double b)
 
 void redraw_root(struct WM_t *W, XEvent *ev)
 {
-    int bgcol;
     int x, y, w, h;
-    GC gc = XCreateGC(W->XDisplay, W->rootWindow, 0, NULL);
 
-    bgcol = makeColourPixel(W, 0.7, 0.7, 0.8);
-
-    XSetForeground(W->XDisplay, gc, bgcol);
+    XSetForeground(W->XDisplay, W->rootGC, W->root_bg_col);
 
     if (ev)
     {
@@ -71,7 +67,7 @@ void redraw_root(struct WM_t *W, XEvent *ev)
         h = W->rH;
     }
 
-    XFillRectangle(W->XDisplay, W->rootWindow, gc, x, y, w, h);
+    XFillRectangle(W->XDisplay, W->rootWindow, W->rootGC, x, y, w, h);
 }
 
 static int error_handler(Display *dpy, XErrorEvent *ev)
@@ -148,7 +144,11 @@ static void make_colours(struct WM_t *W)
                                    p->bg_col[1],
                                    p->bg_col[2]);
 
-    }
+    W->root_bg_col = colour_from_rgb(W, p->root_bg_col[0],
+                                        p->root_bg_col[1],
+                                        p->root_bg_col[2]);
+
+}
 
 static void open_display(struct WM_t *W)
 {
@@ -197,6 +197,7 @@ static void open_display(struct WM_t *W)
     W->cursor_move = XCreateFontCursor(W->XDisplay, XC_fleur);
     XDefineCursor(W->XDisplay, W->rootWindow, W->cursor_normal);
 
+    W->rootGC = XCreateGC(W->XDisplay, W->rootWindow, 0, NULL);
     redraw_root(W, NULL);
 }
 

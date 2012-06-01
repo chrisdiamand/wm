@@ -238,7 +238,10 @@ static void get_pid(struct WM_t *W, struct wmclient *C)
                        &prop_return);   /* The actual data */
 
     if (nitems_return > 0 && prop_return)
+    {
         C->pid = *( (int *) prop_return );
+        XFree(prop_return);
+    }
     else /* It doesn't have a PID property */
         C->pid = 0;
 }

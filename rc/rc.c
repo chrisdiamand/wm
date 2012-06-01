@@ -36,9 +36,14 @@ void rc_add_bool_option(struct rc_t *S, char *name, int *ptr)
 
 struct rc_t *rc_init(void)
 {
-    struct rc_t *S = calloc(1, sizeof(*S));
-    S->nprefs = 0;
-    return S;
+    struct rc_t *R = calloc(1, sizeof(struct rc_t));
+    R->nprefs = 0;
+    return R;
+}
+
+void rc_free(struct rc_t *R)
+{
+    free(R);
 }
 
 void rc_read_file(struct rc_t *R, char *fname)

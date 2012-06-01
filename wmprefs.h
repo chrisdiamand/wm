@@ -12,7 +12,7 @@ struct wmprefs_t
     int         switcher_char_width;
 
     int         focus_border_col[3], unfocus_border_col[3];
-    int         fg_col[3], bg_col[3];
+    int         fg_col[3], bg_col[3], root_bg_col[3];
     
     char        *launcher_font, *switcher_font;
 
