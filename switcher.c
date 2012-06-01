@@ -17,7 +17,7 @@ static void draw_item_text(struct WM_t *W, char *text, int topcorner)
     struct switcher_t *A = &(W->AT);
     int text_w = XTextWidth(A->font, text, strlen(text));
     int text_h = A->font->ascent + A->font->descent;
-    int x, y;
+    int x, y, text_len = strlen(text);
 
     if (text_w < A->w) /* Centre it if it will fit */
         x = (A->w - text_w) / 2;
@@ -25,6 +25,9 @@ static void draw_item_text(struct WM_t *W, char *text, int topcorner)
         x = AT_BORDER + 4; /* 4 is an arbitrary gap before the start of the text */
 
     y = topcorner + (A->item_height + text_h) / 2 - A->font->descent - 1;
+
+    if (text_len > W->prefs.switcher_char_width)
+        text_len = W->prefs.switcher_char_width;
     XDrawString(W->XDisplay, A->win, A->gc, x, y, text, strlen(text));
 
 }
