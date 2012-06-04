@@ -223,12 +223,9 @@ void tidy_up(void)
     msg("Tidying up.\n");
     for (i = 0; i < MAX_CLIENTS; i++)
     {
-        if (W->clients[i] != NULL)
-        {
-            struct wmclient *c = W->clients[i];
-            if (c)
-                free(c);
-        }
+        struct wmclient *c = W->clients[i];
+        if (c)
+            free(c);
     }
     XCloseDisplay(W->XDisplay);
 }
@@ -248,9 +245,7 @@ int main(void)
     log_file = fopen("wm_errors.txt", "w");
     assert(log_file);
 
-
     wm_state_for_quit = &W;
-    atexit(tidy_up);
 
     /* Allocate the state structure */
     init_state(&W);
@@ -267,6 +262,7 @@ int main(void)
     /* And a launcher window */
     launcher_init(&W);
     /* Go! */
+    atexit(tidy_up);
     event_loop(&W);
 
     return 0;

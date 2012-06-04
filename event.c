@@ -95,7 +95,8 @@ static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
     if (C->h < C->min_h)
         C->h = C->min_h;
 
-    XMoveResizeWindow(W->XDisplay, C->win, C->x, C->y, C->w, C->h);
+
+    client_moveresize(W, C, C->x, C->y, C->w, C->h);
 }
 
 /* Move a window. It has been clicked at coordinates (xOff, yOff) relative to
@@ -242,12 +243,12 @@ static void event_configure_request(struct WM_t *W, struct wmclient *C, XEvent *
 
     if (C)
     {
-        msg("Resizing client \'%s\'\n", C->name);
+        msg("ConfigureRequest from client \'%s\'\n", C->name);
         client_moveresize(W, C, conf->x, conf->y, conf->width, conf->height);
     }
     else
     {
-        msg("Resizing anon.\n");
+        msg("ConfigureRequest from unknown window.\n");
         XMoveResizeWindow(W->XDisplay, conf->window,
                           conf->x, conf->y, conf->width, conf->height);
     }
@@ -267,11 +268,14 @@ static void client_message(struct WM_t *W, struct wmclient *C, XEvent *ev)
         if (strncmp(a, NETWM_MAX_STATE, sizeof(NETWM_MAX_STATE)))
             client_togglefullscreen(W, C);
     }
-    /*
-    msg("Atom name %s. Format %d\n", XGetAtomName(W->XDisplay, cm.message_type), cm.format);
-    for (i = 0; i < 5; i++)
-        msg("%d : %s\n", i, XGetAtomName(W->XDisplay, cm.data.l[i]));
-        */
+    else
+    {
+        int i;
+        msg("Unknown client message: ");
+        msg("Atom name %s. Format %d\n", XGetAtomName(W->XDisplay, cm.message_type), cm.format);
+        for (i = 0; i < 5; i++)
+            msg("   %d : %s\n", i, XGetAtomName(W->XDisplay, cm.data.l[i]));
+    }
 }
 
 void event_loop(struct WM_t *W)

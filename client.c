@@ -165,7 +165,8 @@ void client_focus(struct WM_t *W, struct wmclient *C)
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
 }
 
-/* Move and resize a window, saving the new dimensions. Negative sizes mean maximise */
+/* Move and resize a window, saving the new dimensions. Negative sizes mean
+ * maximise but still with a border */
 void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, int h)
 {
     if (C->fullscreen)

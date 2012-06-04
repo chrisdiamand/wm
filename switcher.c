@@ -42,8 +42,6 @@ static void draw_switcher(struct WM_t *W)
     XFillRectangle(W->XDisplay, A->win, A->gc, 0, 0, A->w, A->h);
     XSetForeground(W->XDisplay, A->gc, W->fg_col);
 
-    printf("fg = %lu, bg = %lu\n", W->fg_col, W->bg_col);
-
     for (i = 0; i < W->nclients; i++)
     {
         if (i == A->selected)
@@ -71,7 +69,6 @@ static int switcher_key_event(struct WM_t *W, XEvent *ev)
     if (!(ev->xkey.state & Mod1Mask) ||
         (ev->type == KeyRelease && sym == XK_Alt_L))
     {
-        msg("Alt released.\n");
         client_focus(W, W->clients[W->AT.selected]);
         return -1;
     }
@@ -79,7 +76,6 @@ static int switcher_key_event(struct WM_t *W, XEvent *ev)
     switch (sym)
     {
         case XK_Tab:
-            msg("********* Tab!\n");
             if (ev->type == KeyPress)
             {
                 if (ev->xkey.state & ShiftMask)
@@ -92,13 +88,11 @@ static int switcher_key_event(struct WM_t *W, XEvent *ev)
                 if (A->selected < 0)
                     A->selected = W->nclients - 1;
 
-                msg("Tab: client %d\n", W->AT.selected);
                 draw_switcher(W);
             }
             break;
         /* If escape pressed don't change the focus */
         case XK_Escape:
-            msg("Escape!\n");
             return -1;
     }
     return 0;
@@ -175,8 +169,6 @@ void switcher_init(struct WM_t *W)
     A->x = 1;   A->y = 1;   A->w = 10;   A->h = 10;
     A->inputeventmask = KeyPressMask | KeyReleaseMask | KeymapStateMask | ExposureMask;
 
-    msg("Creating window at %d, %d, size %dx%d\n", A->x, A->y, A->w, A->h);
-
     /* Create the window */
     A->win = XCreateSimpleWindow(W->XDisplay, W->rootWindow,
                                  A->x, A->y, A->w, A->h, 1,
@@ -189,7 +181,7 @@ void switcher_init(struct WM_t *W)
     A->font = XLoadQueryFont(W->XDisplay, W->prefs.switcher_font);
     if (!A->font)
     {
-        msg("Couldn't load font \'%s\', using \'fixed\' instead.\n", W->prefs.switcher_font);
+        msg("Couldn't load switcher font \'%s\', using \'fixed\' instead.\n", W->prefs.switcher_font);
         A->font = XLoadQueryFont(W->XDisplay, "fixed");
         assert(A->font);
     }
