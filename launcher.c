@@ -11,10 +11,11 @@
 #include "launcher.h"
 #include "wm.h"
 
-static int keysym_to_ascii(struct WM_t *W, KeySym sym)
+static int keyevent_to_ascii(struct WM_t *W, XKeyEvent *ev)
 {
     char buf[8];
     int overflow;
+    KeySym sym = XLookupKeysym(ev, (ev->state & ShiftMask) ? 1 : 0 );
     XkbTranslateKeySym(W->XDisplay, &sym, 0, buf, sizeof(buf), &overflow);
     return buf[0];
 }
@@ -50,10 +51,9 @@ static void run(char *cmd)
 static char *launcher_key_event(struct WM_t *W, XEvent *ev)
 {
     struct launcher_t *L = &(W->launcher);
-    KeySym sym = XkbKeycodeToKeysym(W->XDisplay, ev->xkey.keycode, 0, ev->xkey.state & ShiftMask);
-    int ascii = keysym_to_ascii(W, sym);
+    int ascii = keyevent_to_ascii(W, &(ev->xkey));
 
-    if (sym == XK_Return || ascii == '\n' || ascii == '\r')
+    if (ascii == '\n' || ascii == '\r')
     {
         run(L->str);
         return L->str;
@@ -83,6 +83,7 @@ static void launcher_events(struct WM_t *W)
     while (1)
     {
         XMaskEvent(W->XDisplay, W->launcher.inputeventmask, &ev);
+        printf("Event! %s\n", event_name(ev.type));
         switch (ev.type)
         {
             case KeyPress:

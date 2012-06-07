@@ -1,10 +1,10 @@
 
-RC_OBJ=rc/parser.o rc/rc.o rc/scanner.o
-OBJ=client.o event.o launcher.o policy.o switcher.o wm.o wmprefs.o $(RC_OBJ)
-OUT=wm
-LDFLAGS=`pkg-config --libs xproto` -lX11
-CFLAGS=`pkg-config --cflags xproto` -g -Wall -pedantic
-PREFIX=/usr
+RC_OBJ = rc/parser.o rc/rc.o rc/scanner.o
+OBJ = client.o event.o launcher.o policy.o switcher.o wm.o wmprefs.o $(RC_OBJ)
+OUT = wm
+LDFLAGS += `pkg-config --libs xproto` -lX11
+CFLAGS += `pkg-config --cflags xproto` -g -Wall -pedantic
+PREFIX = /usr
 
 
 all: $(OUT)

@@ -51,7 +51,6 @@ char *event_name(int type)
         case ColormapNotify:    return "ColormapNotify";
         case ClientMessage:     return "ClientMessage";
         case MappingNotify:     return "MappingNotify";
-        case GenericEvent:      return "GenericEvent";
         case LASTEvent:         return "LASTEvent";
         default:                return "<UnknownEvent>";
     }
