@@ -10,7 +10,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "launcher.h"
+#include "launcher/launcher.h"
 #include "policy.h"
 #include "switcher.h"
 #include "wm.h"

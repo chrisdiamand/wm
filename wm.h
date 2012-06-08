@@ -7,7 +7,7 @@
 
 #define MAX_CLIENTS 64
 
-#include "launcher.h"
+#include "launcher/launcher.h"
 #include "switcher.h"
 #include "wmprefs.h"
 
