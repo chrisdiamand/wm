@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Desktop file */
 struct df_t
 {
     FILE        *fp;
@@ -12,7 +13,7 @@ struct df_t
     int         lineno;
 };
 
-void skip_to_next_line(struct df_t *D);
+static void skip_to_next_line(struct df_t *D);
 
 static int has_extension(char *fname, char *ext)
 {
@@ -44,7 +45,7 @@ static char next_char(struct df_t *D)
     return c;
 }
 
-void skip_to_next_line(struct df_t *D)
+static void skip_to_next_line(struct df_t *D)
 {
     char c = next_char(D);
     while (c != '\n' && !feof(D->fp))
@@ -74,7 +75,7 @@ static char skip_whitespace(struct df_t *D, int skip_newlines)
     return c;
 }
 
-char *keyname(struct df_t *D, char c)
+static char *keyname(struct df_t *D, char c)
 {
     int i = 0;
     char key[64];
@@ -92,7 +93,7 @@ char *keyname(struct df_t *D, char c)
     return NULL;
 }
 
-void read_groupname(struct df_t *D)
+static void read_groupname(struct df_t *D)
 {
     char c = '[';
     while (c != ']')
@@ -101,7 +102,7 @@ void read_groupname(struct df_t *D)
     }
 }
 
-char *read_rest_of_line(struct df_t *D, char c)
+static char *read_rest_of_line(struct df_t *D, char c)
 {
     int i = 0;
     char str[256]; /* Easier than doing loads of realloc() stuff */
@@ -122,7 +123,7 @@ char *read_rest_of_line(struct df_t *D, char c)
 }
 
 /* Read a key=value pair from a .desktop file */
-void read_line(struct df_t *D, char **key, char **val)
+static void read_line(struct df_t *D, char **key, char **val)
 {
     char c;
     *key = NULL;
@@ -165,7 +166,7 @@ void read_line(struct df_t *D, char **key, char **val)
     ungetc(skip_whitespace(D, 1), D->fp);
 }
 
-void read_desktop_file(char *fname, char **app_name, char **app_exec)
+void read_desktop_file(char *fname, char **app_name, char **app_descr, char **app_exec)
 {
     struct df_t D;
     char *key = NULL, *value = NULL;
@@ -192,10 +193,13 @@ void read_desktop_file(char *fname, char **app_name, char **app_exec)
         {
             if (!strcmp(key, "Name"))
                 *app_name = value;
+            else if (!strcmp(key, "Comment"))
+                *app_descr = value;
             else if (!strcmp(key, "Exec"))
                 *app_exec = value;
             else
-                {   free(key);  free(value);    }
+                free(value);
+            free(key);
         }
     }
     if (!(*app_name))
@@ -204,36 +208,6 @@ void read_desktop_file(char *fname, char **app_name, char **app_exec)
         error(&D, "Does not have a \'Exec=\' field");
 }
 
-void scan_applications_dir(char *path)
-{
-    DIR *dp = opendir(path);
-    struct dirent *entry;
-    char *name, *exec;
-    if (!dp)
-    {
-        perror(path);
-        return;
-    }
-    while ( (entry = readdir(dp)) )
-    {
-        char *n = entry->d_name, *fullpath;
-        if (!strcmp(n, "..") || !strcmp(n, "."))
-            continue;
-        fullpath = malloc( sizeof(char) * (strlen(n) + strlen(path) + 2) );
-        sprintf(fullpath, "%s/%s", path, n);
-        switch (entry->d_type)
-        {
-            case DT_DIR: /* Recursively scan directories */
-                scan_applications_dir(fullpath);
-                break;
-            case DT_REG: /* A regular file */
-                read_desktop_file(fullpath, &name, &exec);
-                break;
-        }
-        free(fullpath);
-    }
-    closedir(dp);
-}
 /*
 int main(int argc, char **argv)
 {
