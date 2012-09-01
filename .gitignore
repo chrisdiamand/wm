@@ -1,0 +1,8 @@
+*~
+*.swp
+*.o
+Session.vim
+stuff_that_crashes_it
+wm
+wmrc
+wm_errors.txt
