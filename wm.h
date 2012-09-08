@@ -41,7 +41,6 @@ struct WM_t
 
     /* Info about the Alt-Tab switcher window */
     struct launcher_t   launcher;
-    struct switcher_t   AT;
 
     /* Colours */
     unsigned long       focus_border_col, unfocus_border_col;
