@@ -5,7 +5,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "../wm.h"
+#include "wm.h"
 
 struct selectbox_t
 {

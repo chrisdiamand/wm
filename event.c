@@ -5,7 +5,7 @@
 #include <X11/X.h>
 #include <X11/Xutil.h>
 
-#include "launcher/launcher.h"
+#include "launcher.h"
 #include "switcher.h"
 #include "wm.h"
 

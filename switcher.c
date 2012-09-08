@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "utils/selectbox.h"
+#include "selectbox.h"
 #include "switcher.h"
 #include "wm.h"
 

@@ -7,10 +7,10 @@
 #include <string.h>
 
 #include "launcher.h"
+#include "list.h"
 #include "menuitems.h"
 #include "read_desktop_file.h"
-#include "../wm.h"
-#include "../utils/list.h"
+#include "wm.h"
 
 /* A list of struct menuitem_t * of all the menu items */
 static struct List *all_menu_items = NULL;

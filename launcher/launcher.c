@@ -10,10 +10,11 @@
 #include <X11/XKBlib.h>
 
 #include "launcher.h"
+#include "list.h"
 #include "menuitems.h"
 #include "read_desktop_file.h"
-#include "../wm.h"
-#include "../utils/list.h"
+#include "selectbox.h"
+#include "wm.h"
 
 static int keyevent_to_ascii(struct WM_t *W, XKeyEvent *ev)
 {
