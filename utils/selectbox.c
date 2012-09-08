@@ -124,6 +124,7 @@ void selectbox_close(struct selectbox_t *sb)
 {
     Display *xd = sb->wm->XDisplay;
     XFreeGC(xd, sb->gc);
+    XUnmapWindow(xd, sb->win);
     XDestroyWindow(xd, sb->win);
     free(sb);
 }

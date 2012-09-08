@@ -316,7 +316,7 @@ void event_loop(struct WM_t *W)
             case MapRequest: /* Does not use CreateNotify */
                 /* Don't register it again if it was just hiding for some reason
                    or if it's the Alt-Tab switcher window */
-                if (!C && ev.xany.window != W->launcher.win)
+                if (!C && ev.xany.window != W->launcher->win)
                     client_register(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);

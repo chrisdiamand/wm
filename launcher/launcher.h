@@ -6,6 +6,9 @@
 
 #include <X11/Xlib.h>
 
+#include "list.h"
+#include "selectbox.h"
+
 struct WM_t;
 
 struct launcher_t
@@ -18,6 +21,10 @@ struct launcher_t
     int                 len;
     char                str[LAUNCHER_MAX_STRLEN];
 
+    struct List         *suggestions;
+    int                 selected;
+
+    struct selectbox_t  *sb;
     XFontStruct         *font;
 };
 

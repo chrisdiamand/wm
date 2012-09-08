@@ -42,9 +42,21 @@ static void scan_applications_dir(char *path)
                 scan_applications_dir(fullpath);
                 break;
             case DT_REG: /* A regular file */
-                M = malloc(sizeof(struct menuitem_t));
+                M = calloc(1, sizeof(struct menuitem_t));
                 read_desktop_file( fullpath, &(M->name), &(M->descr), &(M->exec) );
-                List_push_back(all_menu_items, M);
+
+                if ( (!M->name && !M->descr) || (!M->exec) )
+                {
+                    free(M);
+                    M = NULL;
+                }
+                else if (!M->name && M->descr)
+                {
+                    M->name = M->descr;
+                    M->descr = NULL;
+                }
+                if (M)
+                    List_push_back(all_menu_items, M);
                 break;
         }
         free(fullpath);
@@ -52,7 +64,8 @@ static void scan_applications_dir(char *path)
     closedir(dp);
 }
 
-/* Find menu items for which the name, description or exec contains str */
+/* Find menu items for which the name, description or exec contains str.
+ * Return a list of struct menuitem_t * */
 struct List *menuitems_match(char *str)
 {
     unsigned int i;
@@ -60,12 +73,15 @@ struct List *menuitems_match(char *str)
     for (i = 0; i < all_menu_items->size; i++)
     {
         struct menuitem_t *M = all_menu_items->items[i];
+        if (!M->name)
+            msg("BLANK NAME!\n");
         if (strcasestr(M->name, str))
             List_push_back(L, M);
-        else if (strcasestr(M->descr, str))
-            List_push_back(L, M);
-        else if (strcasestr(M->exec, str))
-            List_push_back(L, M);
+        else if (M->descr)
+        {
+            if (strcasestr(M->descr, str))
+                List_push_back(L, M);
+        }
     }
     return L;
 }

@@ -40,7 +40,7 @@ struct WM_t
     int                 nclients;
 
     /* Info about the Alt-Tab switcher window */
-    struct launcher_t   launcher;
+    struct launcher_t   *launcher;
 
     /* Colours */
     unsigned long       focus_border_col, unfocus_border_col;
