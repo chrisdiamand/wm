@@ -10,8 +10,10 @@
 #include <X11/XKBlib.h>
 
 #include "launcher.h"
+#include "menuitems.h"
 #include "read_desktop_file.h"
 #include "../wm.h"
+#include "../utils/list.h"
 
 static int keyevent_to_ascii(struct WM_t *W, XKeyEvent *ev)
 {
@@ -124,45 +126,13 @@ void launcher(struct WM_t *W)
     launcher_hide(W);
 }
 
-static void scan_applications_dir(char *path)
-{
-    DIR *dp = opendir(path);
-    struct dirent *entry;
-    char *name, *exec, *descr;
-    if (!dp)
-    {
-        perror(path);
-        return;
-    }
-    while ( (entry = readdir(dp)) )
-    {
-        char *n = entry->d_name, *fullpath;
-        if (!strcmp(n, "..") || !strcmp(n, "."))
-            continue;
-        fullpath = malloc( sizeof(char) * (strlen(n) + strlen(path) + 2) );
-        sprintf(fullpath, "%s/%s", path, n);
-        switch (entry->d_type)
-        {
-            case DT_DIR: /* Recursively scan directories */
-                scan_applications_dir(fullpath);
-                break;
-            case DT_REG: /* A regular file */
-                read_desktop_file(fullpath, &name, &descr, &exec);
-                printf("%s: \'%s\' (\'%s\'): \'%s\'\n", fullpath, name, descr, exec);
-                break;
-        }
-        free(fullpath);
-    }
-    closedir(dp);
-}
-
 void launcher_init(struct WM_t *W)
 {
     struct launcher_t *L = &(W->launcher);
 
     /* Scan for .desktop files */
     msg("Loading .desktop files\n");
-    scan_applications_dir("/usr/share/applications");
+    menuitems_scan(W);
     msg("Done.\n");
 
     L->height = 20;

@@ -1,7 +1,9 @@
 
+LAUNCHER_OBJ = launcher/launcher.o launcher/read_desktop_file.o launcher/menuitems.o
 RC_OBJ = rc/parser.o rc/rc.o rc/scanner.o
-LAUNCHER_OBJ = launcher/launcher.o launcher/read_desktop_file.o
-OBJ = client.o event.o policy.o switcher.o wm.o wmprefs.o $(LAUNCHER_OBJ) $(RC_OBJ)
+UTILS_OBJ = utils/list.o utils/selectbox.o
+OBJ = client.o event.o policy.o switcher.o wm.o wmprefs.o \
+	  $(LAUNCHER_OBJ) $(RC_OBJ) $(UTILS_OBJ)
 OUT = wm
 LDFLAGS += `pkg-config --libs xproto` -lX11
 CFLAGS += `pkg-config --cflags xproto` -g -Wall -pedantic

@@ -4,6 +4,8 @@
 
 #define LAUNCHER_MAX_STRLEN 128
 
+#include <X11/Xlib.h>
+
 struct WM_t;
 
 struct launcher_t
