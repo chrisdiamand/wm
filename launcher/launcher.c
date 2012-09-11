@@ -89,7 +89,15 @@ static char **menuitem_list_to_namelist(struct List *L)
     for (i = 0; i < L->size; i++)
     {
         M = L->items[i];
-        ret[i] = M->name;
+        if (M->descr)
+        {
+            ret[i] = malloc(strlen(M->name) + 4 + strlen(M->descr));
+            sprintf(ret[i], "%s - %s", M->name, M->descr);
+        }
+        else
+        {
+            ret[i] = strdup(M->name);
+        }
     }
     return ret;
 }
@@ -157,6 +165,9 @@ static char *launcher_key_event(struct WM_t *W, XEvent *ev)
     /* Get rid of the old one */
     if (L->sb)
     {
+        int i;
+        for (i = 0; i < L->sb->n_items; i++)
+            free(L->sb->items[i]);
         free(L->sb->items);
         selectbox_close(L->sb);
     }
@@ -206,7 +217,7 @@ static void launcher_show(struct WM_t *W)
 
     XMapWindow(W->XDisplay, launcher_win);
     XRaiseWindow(W->XDisplay, launcher_win);
-    XSetInputFocus(W->XDisplay, launcher_win, RevertToParent, CurrentTime);
+    XSetInputFocus(W->XDisplay, launcher_win, RevertToPointerRoot, CurrentTime);
 
     L->str[0] = '\0';
     L->len = 0;
