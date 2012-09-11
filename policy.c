@@ -25,11 +25,15 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
     C->w = attr.width;
     C->h = attr.height;
 
+    msg("Deciding new window size/pos: x = %d, y = %d, w = %d, h = %d\n", C->x, C->y, C->w, C->h);
+
     /* Get hints on size limits, but not the actual sizes. If a client
      * wants a window a certain size, they will just create it that size,
      * not put it as a 'hint'. */
+
     if (XGetWMNormalHints(W->XDisplay, C->win, &hints, &user_hints))
     {
+        msg("Got hints!\n");
         if (hints.flags & PMinSize)
         {
             if (C->min_w < hints.min_width)
@@ -37,9 +41,29 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
             if (C->min_h < hints.min_height)
                 C->min_h = hints.min_height;
         }
+
+        /* If size hints are provided and are larger than
+         * the minimum, use them instead */
+        if (hints.flags & PBaseSize)
+        {
+            msg("base size %dx%d\n", hints.base_width, hints.base_height);
+            if (hints.base_width > C->min_w)
+                C->w = hints.base_width;
+            if (hints.base_height > C->min_h)
+                C->h = hints.base_height;
+        }
+        else if (hints.flags & PSize)
+        {
+            msg("PSize %dx%d\n", hints.width, hints.height);
+            if (hints.width > C->min_w)
+                C->w = hints.width;
+            if (hints.height > C->min_h)
+                C->h = hints.height;
+        }
+        if (hints.flags & PAspect)
+            msg("HAS ASPECT!\n");
     }
 
-    /* The minimum size could be larger than the screen? */
     if (C->w < C->min_w)
         C->w = C->min_w;
     if (C->h < C->min_h)

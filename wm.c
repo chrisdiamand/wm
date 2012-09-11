@@ -165,11 +165,8 @@ static void open_display(struct WM_t *W)
 
     W->XScreen = DefaultScreen(W->XDisplay);
 
-    root = RootWindow(W->XDisplay, DefaultScreen(W->XDisplay));
+    W->rootWindow = root = RootWindow(W->XDisplay, W->XScreen);
     
-
-    W->rootWindow = root;
-
     check_existing_wm(W);
 
     XSelectInput(W->XDisplay, W->rootWindow, KeyPressMask               |
