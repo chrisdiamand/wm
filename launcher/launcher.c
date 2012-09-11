@@ -111,14 +111,27 @@ static char *launcher_key_event(struct WM_t *W, XEvent *ev)
     struct selectbox_t *new_sb = NULL;
     struct List *new_suggestions = NULL;
 
-    if ((ascii == '\n' || ascii == '\r') && L->suggestions)
+    if (ascii == '\n' || ascii == '\r')
     {
-        if (L->selected < L->suggestions->size)
+        if (L->suggestions)
         {
-            struct menuitem_t *M = L->suggestions->items[L->selected];
-            run(M->exec);
-            return L->str;
+            if (L->selected < L->suggestions->size)
+            {
+                struct menuitem_t *M = L->suggestions->items[L->selected];
+                run(M->exec);
+                return L->str;
+            }
         }
+        if (strlen(L->str) > 0)
+        {
+            printf("Running \'%s\'\n", L->str);
+            run(L->str);
+        }
+        else
+        {
+            printf("Not running naffink\n");
+        }
+        return L->str;
     }
     else if (ascii == 27) /* Escape so cancel it */
     {
