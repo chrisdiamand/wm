@@ -6,8 +6,8 @@ OBJ = client.o event.o policy.o switcher.o wm.o wmprefs.o \
 	  $(LAUNCHER_OBJ) $(RC_OBJ) $(UTILS_OBJ)
 OUT = wm
 INCLUDES = -I. -Ilauncher -Irc -Iutils
-LDFLAGS += `pkg-config --libs xproto` -lX11
-CFLAGS += `pkg-config --cflags xproto` $(INCLUDES) -g -Wall -pedantic
+LDFLAGS += `pkg-config --libs xproto` `pkg-config --libs xinerama` -lX11
+CFLAGS += `pkg-config --cflags xproto` `pkg-config --cflags xinerama` $(INCLUDES) -g -Wall -pedantic
 PREFIX = /usr
 
 

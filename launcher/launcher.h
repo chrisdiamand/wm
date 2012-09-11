@@ -29,7 +29,6 @@ struct WM_t;
 
 struct launcher_t
 {
-    Window              win;
     int                 height;
     GC                  gc;
     unsigned long       inputeventmask;

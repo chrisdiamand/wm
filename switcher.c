@@ -115,8 +115,10 @@ static void switcher_show(struct WM_t *W)
     else
         currently_selected = 0;
 
-    sb = selectbox_new(W, W->rW / 2, W->rH / 2, 200, 1,
-                       namelist, W->nclients, switcher_font);
+    sb = selectbox_new(W, curr_head_x(W) + curr_width(W) / 2,
+                       curr_head_y(W) + curr_height(W) / 2,
+                       200, 1, namelist, W->nclients, switcher_font);
+
     XSetInputFocus(W->XDisplay, sb->win, RevertToPointerRoot, CurrentTime);
 }
 

@@ -22,6 +22,8 @@
 #include "wm.h"
 
 void decide_new_window_size_pos(struct WM_t *, struct wmclient *);
+int which_head(struct WM_t *, int, int);
+void refresh_current_head(struct WM_t *);
 
 #endif
 

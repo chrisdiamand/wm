@@ -79,8 +79,8 @@ void redraw_root(struct WM_t *W, XEvent *ev)
     {
         x = 0;
         y = 0;
-        w = W->rW;
-        h = W->rH;
+        w = W->root_max_w;
+        h = W->root_max_h;
     }
 
     XFillRectangle(W->XDisplay, W->rootWindow, W->rootGC, x, y, w, h);
@@ -111,7 +111,6 @@ static int starting_error_handler(Display *dpy, XErrorEvent *ev)
     /* If this function is called another WM must be running */
     msg("Error: Could not select SubstructureRedirectMask on root window.\n");
     msg("Is another window manager running?\n");
-    msg("Quitting.\n");
     /* Die properly so the atexit() function isn't called */
     _Exit(1);
     return 1;
@@ -168,9 +167,7 @@ static void make_colours(struct WM_t *W)
 
 static void open_display(struct WM_t *W)
 {
-    Window root, tmpwin;
-    int tmpx, tmpy;
-    unsigned int tmpbw, tmpdepth;
+    Window root;
 
     W->XDisplay = XOpenDisplay(NULL);
     if (!W->XDisplay)
@@ -192,15 +189,6 @@ static void open_display(struct WM_t *W)
                                              ButtonPressMask            |
                                              ButtonReleaseMask          |
                                              ExposureMask);
-    
-
-
-    /* Find out the geometry of the root window */
-    XGetGeometry(W->XDisplay, W->rootWindow, &tmpwin,
-                 &tmpx, &tmpy,
-                 &(W->rW), &(W->rH),
-                 &tmpbw, &tmpdepth);
-
     make_colours(W);
 
     XSetErrorHandler(error_handler);
@@ -214,18 +202,38 @@ static void open_display(struct WM_t *W)
     redraw_root(W, NULL);
 }
 
-
-
-static void find_open_windows(struct WM_t *W)
+static void refresh_X_info(struct WM_t *W)
 {
-    Window *children, root_ret, par_ret;
-    unsigned int n, i;
-    XQueryTree(W->XDisplay, W->rootWindow, &root_ret, &par_ret, &children, &n);
+    int evbase, errbase;
+    Window tmpwin;
+    int tmpx, tmpy;
+    unsigned int tmpbw, tmpdepth;
 
-    for (i = 0; i < n; i++)
-        client_register(W, children[i]);
+    XGetGeometry(W->XDisplay, W->rootWindow, &tmpwin,
+                 &tmpx, &tmpy,
+                 &(W->root_max_w), &(W->root_max_h),
+                 &tmpbw, &tmpdepth);
 
-    XFree(children);
+
+    if (!XineramaQueryExtension(W->XDisplay, &evbase, &errbase))
+    {
+        msg("Error: Could not load Xinerama extension!\n");
+
+        W->heads = malloc(sizeof(XineramaScreenInfo));
+        W->n_heads = 1;
+
+        /* Load the root window dimensions and put it into a single XineramaScreenInfo */
+        /* Just use the default root window dimensions */
+        W->heads->screen_number = 0;
+        W->heads->x_org = W->heads->y_org = 0;
+        W->heads->width = W->root_max_w;
+        W->heads->height = W->root_max_h;
+    }
+    else
+    {
+        W->heads = XineramaQueryScreens(W->XDisplay, &(W->n_heads));
+    }
+    W->curr_head = 0;
 }
 
 /* Clean up nicely and unreparent all the windows */
@@ -268,8 +276,12 @@ int main(void)
     wmprefs_read_config_files(&(W.prefs));
     /* Open connection to X server */
     open_display(&W);
+    /* Get information about connected monitors */
+    refresh_X_info(&W);
+    /* Draw root background */
+    redraw_root(&W, NULL);
     /* See if anything is already open (e.g. a typing .xinitrc) */
-    find_open_windows(&W);
+    client_find_open_windows(&W);
     /* Allocate the alt-tab window */
     switcher_init(&W);
     /* And a launcher window */

@@ -53,12 +53,12 @@ static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
         e.height = C->h;
         e.border_width = W->prefs.bw;
     }
-    else
+    else /* If it's fullscreen, set is as the dimensions of the current head */
     {
         e.x = 0;
         e.y = 0;
-        e.width = W->rW;
-        e.height = W->rH;
+        e.width = curr_width(W);
+        e.height = curr_height(W);
         e.border_width = 0;
     }
     XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
@@ -179,22 +179,26 @@ void client_focus(struct WM_t *W, struct wmclient *C)
     XRaiseWindow(W->XDisplay, C->win);
     XSetInputFocus(W->XDisplay, C->win, RevertToPointerRoot, CurrentTime);
     XUngrabButton(W->XDisplay, Button1, 0, C->win);
+
+    refresh_current_head(W);
 }
 
 /* Move and resize a window, saving the new dimensions. Negative sizes mean
  * maximise but still with a border */
 void client_moveresize(struct WM_t *W, struct wmclient *C, int x, int y, int w, int h)
 {
+    /* We can't move fullscreen windows so set it to its original size */
     if (C->fullscreen)
     {
         C->fullscreen = 0;
         set_size_pos_border(W, C);
     }
 
-    if (w > W->rW || w < 0)
-        w = W->rW - 2 * W->prefs.bw;
-    if (h > W->rH || h < 0)
-        h = W->rH - 2 * W->prefs.bw;
+    /* Make sure it's smaller than the screen */
+    if (w > curr_width(W) || w < 0)
+        w = curr_width(W) - 2 * W->prefs.bw;
+    if (h > curr_height(W) || h < 0)
+        h = curr_height(W) - 2 * W->prefs.bw;
 
     C->x = x;
     C->y = y;
@@ -209,7 +213,9 @@ static void maximise(struct WM_t *W, struct wmclient *C)
     msg("client_MAX: %s\n", C->name);
     C->fullscreen = 1;
     XSetWindowBorderWidth(W->XDisplay, C->win, 0);
-    XMoveResizeWindow(W->XDisplay, C->win, 0, 0, W->rW, W->rH);
+    XMoveResizeWindow(W->XDisplay, C->win,
+                      curr_head_x(W), curr_head_y(W),
+                      curr_width(W), curr_height(W));
 
     send_ConfigureNotify(W, C);
 }
@@ -263,6 +269,8 @@ static void get_pid(struct WM_t *W, struct wmclient *C)
         C->pid = 0;
 }
 
+static int registering_existing_windows = 0;
+
 /* Register a client, steal its border, grap events, etc */
 void client_register(struct WM_t *W, Window xwindow_id)
 {
@@ -270,21 +278,31 @@ void client_register(struct WM_t *W, Window xwindow_id)
 
     XFetchName(W->XDisplay, xwindow_id, &(C->name));
     if (!(C->name))
-        C->name = "<notitle>";
+        C->name = strdup("<notitle>");
     msg("Registering \'%s\':\n", C->name);
 
     C->win = xwindow_id;
 
     decide_new_window_size_pos(W, C);
 
+    /* Unless it's a window found at startup, move it
+     * to the current head/screen */
+    if (!registering_existing_windows)
+    {
+        C->x += curr_head_x(W);
+        C->y += curr_head_y(W);
+    }
+
+
     C->fullscreen = 0;
+
+    XMapWindow(W->XDisplay, C->win);
 
     set_size_pos_border(W, C);
 
     client_select_events(W, C);
 
     send_ConfigureNotify(W, C);
-    XMapWindow(W->XDisplay, C->win);
 
     get_pid(W, C);
 
@@ -295,6 +313,22 @@ void client_register(struct WM_t *W, Window xwindow_id)
     XFlush(W->XDisplay);
 
     print_clients(W);
+}
+
+void client_find_open_windows(struct WM_t *W)
+{
+    Window *children, root_ret, par_ret;
+    unsigned int n, i;
+    XQueryTree(W->XDisplay, W->rootWindow, &root_ret, &par_ret, &children, &n);
+
+    registering_existing_windows = 1;
+
+    for (i = 0; i < n; i++)
+        client_register(W, children[i]);
+
+    registering_existing_windows = 0;
+
+    XFree(children);
 }
 
 /* Find a wmclient structure from its window ID */

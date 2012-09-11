@@ -86,16 +86,42 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
         C->h = C->min_h;
 
     /* Don't let windows be larger than the root window */
-    if (C->w > W->rW)
+    if (C->w > curr_width(W))
     {
-        C->w = W->rW - 2 * W->prefs.bw;
-        C->x = 0;
+        C->w = curr_width(W) - 2 * W->prefs.bw;
+        C->x = curr_head_x(W);
     }
 
-    if (C->h > W->rH)
+    if (C->h > curr_height(W))
     {
-        C->h = W->rH - 2 * W->prefs.bw;
-        C->y = 0;
+        C->h = curr_height(W) - 2 * W->prefs.bw;
+        C->y = curr_head_y(W);
     }
+}
+
+int which_head(struct WM_t *W, int x, int y)
+{
+    int i;
+    for (i = 0; i < W->n_heads; i++)
+    {
+        XineramaScreenInfo *H = W->heads + i;
+        if (H->x_org <= x           &&
+            x < H->x_org + H->width &&
+            H->y_org <= H->height   &&
+            y < H->y_org + H->height)
+            return i;
+             
+    }
+    msg("??? Head not found: %dx%d ???\n", x, y);
+    return 0;
+}
+
+void refresh_current_head(struct WM_t *W)
+{
+    /* The current screen is the one with the currently focused window */
+    if (W->nclients > 0)
+        W->curr_head = which_head(W, W->clients[0]->x, W->clients[0]->y);
+    else
+        W->curr_head = 0;
 }
 

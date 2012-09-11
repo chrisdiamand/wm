@@ -22,13 +22,16 @@
 #include <X11/Xutil.h>
 
 #include "launcher.h"
+#include "policy.h"
 #include "switcher.h"
 #include "wm.h"
 
+#if 0
 static int ABS(int n)
 {
     return n >= 0 ? n : -n;
 }
+#endif
 
 char *event_name(int type)
 {
@@ -79,8 +82,11 @@ static void event_expose(struct WM_t *W, XEvent *ev)
         redraw_root(W, ev);
 }
 
+/* Move a window to the position in the wmclient struct, but
+ * first see if it can be snapped to any edges */
 static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
 {
+    #if 0
     /* Work out the bottom right corner position */
     int rx = C->x + C->w + 2 * W->prefs.bw;
     int ry = C->y + C->h + 2 * W->prefs.bw;
@@ -110,7 +116,7 @@ static void move_snap(struct WM_t *W, struct wmclient *C, int resize)
     if (C->h < C->min_h)
         C->h = C->min_h;
 
-
+    #endif
     client_moveresize(W, C, C->x, C->y, C->w, C->h);
 }
 
@@ -126,10 +132,10 @@ static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int 
     /* If it's fullscreen, add a border and move it as the size of the whole screen. */
     if (C->fullscreen)
     {
-        C->x = 0;
-        C->y = 0;
-        C->w = W->rW - 2 * W->prefs.bw;
-        C->h = W->rH - 2 * W->prefs.bw;
+        C->x = curr_head_x(W);
+        C->y = curr_head_y(W);
+        C->w = curr_width(W) - 2 * W->prefs.bw;
+        C->h = curr_height(W) - 2 * W->prefs.bw;
         client_togglefullscreen(W, C);
     }
 
@@ -158,6 +164,7 @@ static void event_move_window(struct WM_t *W, struct wmclient *C, int xOff, int 
             default:
                 /* Select the normal events again */
                 XUngrabPointer(W->XDisplay, CurrentTime);
+                refresh_current_head(W);
                 return;
         }
     }
@@ -173,10 +180,10 @@ static void event_resize_window(struct WM_t *W, struct wmclient *C, int init_x, 
 
     if (C->fullscreen)
     {
-        C->x = 0;
-        C->y = 0;
-        startW = C->w = W->rW - 2 * W->prefs.bw;
-        startH = C->h = W->rH - 2 * W->prefs.bw;
+        C->x = curr_head_x(W);
+        C->y = curr_head_y(W);
+        startW = C->w = curr_width(W) - 2 * W->prefs.bw;
+        startH = C->h = curr_height(W) - 2 * W->prefs.bw;
         client_togglefullscreen(W, C);
     }
     /* Grab the pointer to ensure the ButtonRelease event is received
@@ -229,16 +236,18 @@ static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
                 break;
             /* Tiling. Passing -1 to moveresize is for maximising in that dimension */
             case XK_Up:
-                client_moveresize(W, C, 0, 0, -1, W->rH / 2 - 2 * B);
+                client_moveresize(W, C, curr_head_x(W), curr_head_y(W), -1, curr_height(W) / 2 - 2 * B);
                 break;
             case XK_Down:
-                client_moveresize(W, C, 0, W->rH / 2 - B, -1, W->rH / 2 - B);
+                client_moveresize(W, C, curr_head_x(W), curr_head_y(W) + curr_height(W) / 2 - B,
+                                  -1, curr_height(W) / 2 - B);
                 break;
             case XK_Left:
-                client_moveresize(W, C, 0, 0, W->rW / 2 - 2 * B, -1);
+                client_moveresize(W, C, curr_head_x(W), curr_head_y(W), curr_width(W) / 2 - 2 * B, -1);
                 break;
             case XK_Right:
-                client_moveresize(W, C, W->rW / 2 - B, 0, W->rW / 2 - B, -1);
+                client_moveresize(W, C, curr_head_x(W) + curr_width(W) / 2 - B,
+                                  curr_head_y(W), curr_width(W) / 2 - B, -1);
                 break;
             case XK_Return:
                 launcher(W);
@@ -260,6 +269,7 @@ static void event_configure_request(struct WM_t *W, struct wmclient *C, XEvent *
     {
         msg("ConfigureRequest from client \'%s\'\n", C->name);
         client_moveresize(W, C, conf->x, conf->y, conf->width, conf->height);
+        refresh_current_head(W);
     }
     else
     {
@@ -323,6 +333,10 @@ void event_loop(struct WM_t *W)
                     client_focus(W, C);
                     XSendEvent(W->XDisplay, C->win, 0, ButtonPressMask, &ev);
                 }
+                else if (ev.xany.window == W->rootWindow)
+                {
+                    W->curr_head = which_head(W, ev.xbutton.x, ev.xbutton.y);
+                }
                 break;
             case ConfigureNotify:
                 break;
@@ -330,9 +344,8 @@ void event_loop(struct WM_t *W)
                 event_configure_request(W, C, &ev);
                 break;
             case MapRequest: /* Does not use CreateNotify */
-                /* Don't register it again if it was just hiding for some reason
-                   or if it's the Alt-Tab switcher window */
-                if (!C && ev.xany.window != W->launcher->win)
+                /* Don't register it again if it was just hiding for some reason */
+                if (!C)
                     client_register(W, ev.xmaprequest.window);
                 else
                     XMapWindow(W->XDisplay, C->win);

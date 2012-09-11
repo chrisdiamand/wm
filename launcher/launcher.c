@@ -32,6 +32,8 @@
 #include "selectbox.h"
 #include "wm.h"
 
+static Window launcher_win;
+
 static int keyevent_to_ascii(struct WM_t *W, XKeyEvent *ev)
 {
     char buf[8];
@@ -49,12 +51,12 @@ static void draw_launcher(struct WM_t *W)
 
     /* Draw a grey background */
     XSetForeground(W->XDisplay, L->gc, W->bg_col);
-    XFillRectangle(W->XDisplay, L->win, L->gc, 0, 0, W->rW, L->height);
+    XFillRectangle(W->XDisplay, launcher_win, L->gc, 0, 0, curr_width(W), L->height);
     /* Draw the cursor */
     XSetForeground(W->XDisplay, L->gc, W->fg_col);
-    XFillRectangle(W->XDisplay, L->win, L->gc, cursorpos, y - L->font->ascent, 2, text_h);
+    XFillRectangle(W->XDisplay, launcher_win, L->gc, cursorpos, y - L->font->ascent, 2, text_h);
 
-    XDrawString(W->XDisplay, L->win, L->gc, 10, y, L->str, L->len);
+    XDrawString(W->XDisplay, launcher_win, L->gc, 10, y, L->str, L->len);
 
     if (L->sb)
         selectbox_draw(L->sb, L->selected);
@@ -148,7 +150,7 @@ static char *launcher_key_event(struct WM_t *W, XEvent *ev)
         char **new_items;
         new_suggestions = menuitems_match(L->str);
         new_items = menuitem_list_to_namelist(new_suggestions);
-        new_sb = selectbox_new(W, 0, L->height + 1, 350,
+        new_sb = selectbox_new(W, curr_head_x(W), curr_head_y(W) + L->height + 1, 350,
                                0, new_items, new_suggestions->size, L->font); 
     }
 
@@ -192,17 +194,27 @@ static void launcher_events(struct WM_t *W)
 static void launcher_show(struct WM_t *W)
 {
     struct launcher_t *L = W->launcher;
-    XMapWindow(W->XDisplay, L->win);
-    XRaiseWindow(W->XDisplay, L->win);
-    XSetInputFocus(W->XDisplay, L->win, RevertToPointerRoot, CurrentTime);
+
+    launcher_win = XCreateSimpleWindow(W->XDisplay, W->rootWindow, curr_head_x(W), curr_head_y(W),
+                                       curr_width(W) - 2, L->height, 1, W->fg_col, W->bg_col);
+
+    XSelectInput(W->XDisplay, launcher_win, L->inputeventmask);
+
+    L->gc = XCreateGC(W->XDisplay, launcher_win, 0, NULL);
+
+    XSetFont(W->XDisplay, L->gc, L->font->fid);
+
+    XMapWindow(W->XDisplay, launcher_win);
+    XRaiseWindow(W->XDisplay, launcher_win);
+    XSetInputFocus(W->XDisplay, launcher_win, RevertToParent, CurrentTime);
+
+    L->str[0] = '\0';
+    L->len = 0;
 }
 
 static void launcher_hide(struct WM_t *W)
 {
     struct launcher_t *L = W->launcher;
-    XUnmapWindow(W->XDisplay, L->win);
-    L->str[0] = '\0';
-    L->len = 0;
 
     if (L->sb)
     {
@@ -210,6 +222,11 @@ static void launcher_hide(struct WM_t *W)
         selectbox_close(L->sb);
         L->sb = NULL;
     }
+
+    XUnmapWindow(W->XDisplay, launcher_win);
+    XFreeGC(W->XDisplay, L->gc);
+    XDestroyWindow(W->XDisplay, launcher_win);
+    launcher_win = 0;
 }
 
 void launcher(struct WM_t *W)
@@ -237,15 +254,9 @@ void launcher_init(struct WM_t *W)
 
     L->height = 20;
 
-    L->win = XCreateSimpleWindow(W->XDisplay, W->rootWindow, 0, 0, W->rW, L->height,
-                                 1, W->fg_col, W->bg_col);
-
     L->inputeventmask = KeyPressMask | KeymapStateMask | ExposureMask;
-    XSelectInput(W->XDisplay, L->win, L->inputeventmask);
 
-    L->gc = XCreateGC(W->XDisplay, L->win, 0, NULL);
-
-    /* Load the font */
+        /* Load the font */
     L->font = XLoadQueryFont(W->XDisplay, W->prefs.launcher_font);
     if (!L->font)
     {
@@ -253,10 +264,5 @@ void launcher_init(struct WM_t *W)
         L->font = XLoadQueryFont(W->XDisplay, "fixed");
         assert(L->font);
     }
-
-    XSetFont(W->XDisplay, L->gc, L->font->fid);
-
-    L->str[0] = '\0';
-    L->len = 0;
 }
 

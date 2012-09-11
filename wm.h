@@ -20,6 +20,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/Xinerama.h>
 
 #define MAX_CLIENTS 64
 
@@ -49,7 +50,9 @@ struct WM_t
     Cursor              cursor_normal, cursor_move, cursor_resize;
 
     /* Root window width and height */
-    unsigned int        rW, rH;
+    unsigned int        root_max_w, root_max_h;
+    XineramaScreenInfo  *heads;
+    int                 n_heads, curr_head;
 
     /* List of open windows/programs, sorted in focus order. */
     struct wmclient     *clients[MAX_CLIENTS];
@@ -65,6 +68,12 @@ struct WM_t
     struct wmprefs_t    prefs;
 };
 
+/* Quick ways to access the dimensions of the current head */
+#define curr_width(W) ((W)->heads[(W)->curr_head].width)
+#define curr_height(W) ((W)->heads[(W)->curr_head].height)
+#define curr_head_x(W) ((W)->heads[(W)->curr_head].x_org)
+#define curr_head_y(W) ((W)->heads[(W)->curr_head].y_org)
+
 void do_alttab(struct WM_t *);
 void redraw_root(struct WM_t *, XEvent *);
 
@@ -77,6 +86,7 @@ void client_togglefullscreen(struct WM_t *, struct wmclient *);
 void client_moveresize(struct WM_t *, struct wmclient *, int, int, int, int);
 void client_focus(struct WM_t *, struct wmclient *);
 void client_remove(struct WM_t *, struct wmclient *);
+void client_find_open_windows(struct WM_t *);
 
 /* Functions from event.c */
 char *event_name(int);
