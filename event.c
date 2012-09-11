@@ -251,6 +251,7 @@ static void event_key_pressed(struct WM_t *W, struct wmclient *C, XEvent *ev)
                 break;
             case XK_Return:
                 launcher(W);
+                redraw_root(W, NULL);
                 break;
         }
     }
