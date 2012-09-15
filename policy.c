@@ -37,9 +37,25 @@ void decide_new_window_size_pos(struct WM_t *W, struct wmclient *C)
             if (C->min_h < hints.min_height)
                 C->min_h = hints.min_height;
         }
+
+        /* If size hints are provided and are larger than
+         * the minimum, use them instead */
+        if (hints.flags & PBaseSize)
+        {
+            if (hints.base_width > C->min_w)
+                C->w = hints.base_width;
+            if (hints.base_height > C->min_h)
+                C->h = hints.base_height;
+        }
+        else if (hints.flags & PSize)
+        {
+            if (hints.width > C->min_w)
+                C->w = hints.width;
+            if (hints.height > C->min_h)
+                C->h = hints.height;
+        }
     }
 
-    /* The minimum size could be larger than the screen? */
     if (C->w < C->min_w)
         C->w = C->min_w;
     if (C->h < C->min_h)

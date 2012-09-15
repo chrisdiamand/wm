@@ -154,7 +154,7 @@ void client_focus(struct WM_t *W, struct wmclient *C)
 
     /* Unfocus the old window */
     /* Re-enable grabbing for click events */
-    XGrabButton(W->XDisplay, Button1, 0, old->win, 0, ButtonPressMask,
+    XGrabButton(W->XDisplay, Button1, 0, old->win, 0, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
                 GrabModeAsync, GrabModeSync, None, None);
     /* Make the border boring */
     set_border_colour(W, old, 0);
