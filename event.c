@@ -329,10 +329,18 @@ void event_loop(struct WM_t *W)
                         event_move_window(W, C, ev.xbutton.x, ev.xbutton.y);
                 }
                 /* A normal click to focus a window */
-                else if (C && state == 0)
+                else if (C)
                 {
                     client_focus(W, C);
-                    XSendEvent(W->XDisplay, C->win, 0, ButtonPressMask, &ev);
+                    XSendEvent(W->XDisplay, C->win, 0, 0, &ev);
+                }
+                break;
+            case ButtonRelease:
+            case MotionNotify:
+                if (C)
+                {
+                    client_focus(W, C);
+                    XSendEvent(W->XDisplay, C->win, 0, 0, &ev);
                 }
                 else if (ev.xany.window == W->rootWindow)
                 {
