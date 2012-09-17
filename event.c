@@ -347,8 +347,6 @@ void event_loop(struct WM_t *W)
                     W->curr_head = which_head(W, ev.xbutton.x, ev.xbutton.y);
                 }
                 break;
-            case ConfigureNotify:
-                break;
             case ConfigureRequest:
                 event_configure_request(W, C, &ev);
                 break;
@@ -356,8 +354,7 @@ void event_loop(struct WM_t *W)
                 /* Don't register it again if it was just hiding for some reason */
                 if (!C)
                     client_register(W, ev.xmaprequest.window);
-                else
-                    XMapWindow(W->XDisplay, C->win);
+                XMapWindow(W->XDisplay, ev.xmaprequest.window);
                 break;
             case UnmapNotify:
                 if (C)

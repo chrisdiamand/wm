@@ -36,39 +36,11 @@ static void print_clients(struct WM_t *W)
         msg("    -> \'%s\'\n", W->clients[i]->name);
 }
 
-static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
+static void set_net_wm_status(struct WM_t *W, struct wmclient *C)
 {
-    XConfigureEvent e;
     Atom props[2];
     props[0] = get_atom(W, "_NET_WM_STATE_MAXIMIZED_HORZ");
     props[1] = get_atom(W, "_NET_WM_STATE_MAXIMIZED_VERT");
-
-#if 0
-    e.type = ConfigureNotify;
-    e.display = W->XDisplay;
-    e.event = C->win;
-    e.window = C->win;
-    e.above = None;
-    e.override_redirect = 0;
-
-    if (!C->fullscreen)
-    {
-        e.x = C->x;
-        e.y = C->y;
-        e.width = C->w;
-        e.height = C->h;
-        e.border_width = W->prefs.bw;
-    }
-    else /* If it's fullscreen, set is as the dimensions of the current head */
-    {
-        e.x = 0;
-        e.y = 0;
-        e.width = curr_width(W);
-        e.height = curr_height(W);
-        e.border_width = 0;
-    }
-    XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
-#endif
 
     XChangeProperty(W->XDisplay, C->win, get_atom(W, "_NET_WM_STATE"),
                     XA_ATOM, 32, PropModeReplace, (unsigned char *) props,
@@ -228,7 +200,7 @@ static void maximise(struct WM_t *W, struct wmclient *C)
                       curr_head_x(W), curr_head_y(W),
                       curr_width(W), curr_height(W));
 
-    send_ConfigureNotify(W, C);
+    set_net_wm_status(W, C);
 }
 
 static void unmaximise(struct WM_t *W, struct wmclient *C)
@@ -237,7 +209,7 @@ static void unmaximise(struct WM_t *W, struct wmclient *C)
     C->fullscreen = 0;
     set_size_pos_border(W, C);
 
-    send_ConfigureNotify(W, C);
+    set_net_wm_status(W, C);
 }
 
 void client_togglefullscreen(struct WM_t *W, struct wmclient *C)
@@ -312,8 +284,6 @@ void client_register(struct WM_t *W, Window xwindow_id)
     set_size_pos_border(W, C);
 
     client_select_events(W, C);
-
-    send_ConfigureNotify(W, C);
 
     get_pid(W, C);
 
