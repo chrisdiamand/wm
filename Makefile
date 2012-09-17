@@ -14,6 +14,7 @@ PREFIX = /usr
 all: $(OUT)
 
 $(OUT): $(OBJ)
+	$(CC) -o $(OUT) $(OBJ) $(LDFLAGS)
 
 install: $(OUT)
 	echo "This is a new make install command. prefix = $(PREFIX)"
