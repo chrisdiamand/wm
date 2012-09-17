@@ -20,11 +20,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
 #include "policy.h"
 #include "wm.h"
+#include "xatoms.h"
 
 static void print_clients(struct WM_t *W)
 {
@@ -37,7 +39,11 @@ static void print_clients(struct WM_t *W)
 static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
 {
     XConfigureEvent e;
+    Atom props[2];
+    props[0] = get_atom(W, "_NET_WM_STATE_MAXIMIZED_HORZ");
+    props[1] = get_atom(W, "_NET_WM_STATE_MAXIMIZED_VERT");
 
+#if 0
     e.type = ConfigureNotify;
     e.display = W->XDisplay;
     e.event = C->win;
@@ -62,6 +68,11 @@ static void send_ConfigureNotify(struct WM_t *W, struct wmclient *C)
         e.border_width = 0;
     }
     XSendEvent(W->XDisplay, C->win, 0, StructureNotifyMask, (XEvent *)(&e));
+#endif
+
+    XChangeProperty(W->XDisplay, C->win, get_atom(W, "_NET_WM_STATE"),
+                    XA_ATOM, 32, PropModeReplace, (unsigned char *) props,
+                    C->fullscreen ? sizeof(props) / sizeof(Atom) : 0);
 }
 
 /* Move all clients with focus position between start end down the list,

@@ -1,7 +1,7 @@
 
 LAUNCHER_OBJ = launcher/launcher.o launcher/read_desktop_file.o launcher/menuitems.o
 RC_OBJ = rc/parser.o rc/rc.o rc/scanner.o
-UTILS_OBJ = utils/list.o utils/selectbox.o
+UTILS_OBJ = utils/list.o utils/selectbox.o utils/xatoms.o
 OBJ = client.o event.o policy.o switcher.o wm.o wmprefs.o \
 	  $(LAUNCHER_OBJ) $(RC_OBJ) $(UTILS_OBJ)
 OUT = wm
