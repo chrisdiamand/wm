@@ -215,24 +215,27 @@ static void refresh_X_info(struct WM_t *W)
                  &tmpbw, &tmpdepth);
 
 
-    if (!XineramaQueryExtension(W->XDisplay, &evbase, &errbase))
+    if (XineramaQueryExtension(W->XDisplay, &evbase, &errbase))
     {
-        msg("Error: Could not load Xinerama extension!\n");
+        W->heads = XineramaQueryScreens(W->XDisplay, &(W->n_heads));
+        printf("Querying screens, got %p, n = %u\n", W->heads, W->n_heads);
+    }
+
+    if (W->heads == NULL)
+    {
+        msg("Error: Xinerama either not present or not active!\n");
 
         W->heads = malloc(sizeof(XineramaScreenInfo));
         W->n_heads = 1;
 
-        /* Load the root window dimensions and put it into a single XineramaScreenInfo */
-        /* Just use the default root window dimensions */
+        /* Load the root window dimensions and put it into a single
+         * XineramaScreenInfo, using the root window dimensions */
         W->heads->screen_number = 0;
         W->heads->x_org = W->heads->y_org = 0;
         W->heads->width = W->root_max_w;
         W->heads->height = W->root_max_h;
     }
-    else
-    {
-        W->heads = XineramaQueryScreens(W->XDisplay, &(W->n_heads));
-    }
+    
     W->curr_head = 0;
 }
 

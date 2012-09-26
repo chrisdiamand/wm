@@ -376,6 +376,8 @@ void event_loop(struct WM_t *W)
                 else
                     msg("Client message from unknown client!\n");
                 break;
+            case ConfigureNotify:
+                break;
             default:
                 msg("- %s -", event_name(ev.type));
                 if (C)
